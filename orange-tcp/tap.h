@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "absl/status/status.h"
 
 class TapDevice {
  public:
@@ -8,7 +9,7 @@ class TapDevice {
   // `path` should be in an interface in /dev/net; for example
   // /dev/net/tap/tap0.
   // Returns true upon success.
-  bool Create(std::string path);
+  absl::Status Create(std::string path);
  private:
   int fd_;
   std::string name_;

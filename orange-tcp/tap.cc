@@ -11,13 +11,12 @@
 #include <errno.h>
 #include <unistd.h>
 
-bool TapDevice::Create(std::string path) {
+absl::Status TapDevice::Create(std::string path) {
     struct ifreq ifr = {0};
 
     fd_ = open("/dev/net/tap", O_RDWR);
     if (fd_ < 0) {
-        printf("Cannot open TUN/TAP dev\n");
-        return false;
+        return absl::InternalError("Cannot open TUN/TAP device.");
     }
 
     ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
@@ -26,9 +25,9 @@ bool TapDevice::Create(std::string path) {
     if (ioctl(fd_, TUNSETIFF, reinterpret_cast<void *>(&ifr)) < 0) {
         printf("ERR: Could not ioctl tun: %s\n", strerror(errno));
         close(fd_);
-        return false;
+        return absl::InternalError("ioctl TUNSETIFF failed.");
     }
 
     name_ = std::string(ifr.ifr_name);
-    return true;
+    return absl::OkStatus();
 }

@@ -2,7 +2,7 @@
 
 todo
 
-## Installation
+## Getting started
 
 First time:
 ```
