@@ -23,11 +23,20 @@ absl::Status TapDevice::Create(std::string path) {
     strncpy(ifr.ifr_name, path.c_str(), IFNAMSIZ - 1);
 
     if (ioctl(fd_, TUNSETIFF, reinterpret_cast<void *>(&ifr)) < 0) {
-        printf("ERR: Could not ioctl tun: %s\n", strerror(errno));
         close(fd_);
         return absl::InternalError("ioctl TUNSETIFF failed.");
     }
 
     name_ = std::string(ifr.ifr_name);
     return absl::OkStatus();
+}
+
+template <class T>
+int TapDevice::Read(T buf, size_t length) {
+    return read(fd_, buf, length);
+}
+
+template <class T>
+int TapDevice::Write(T buf, size_t length) {
+    return write(fd_, buf, length);
 }
