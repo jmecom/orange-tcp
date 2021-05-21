@@ -11,32 +11,50 @@
 #include <errno.h>
 #include <unistd.h>
 
-absl::Status TapDevice::Create(std::string path) {
-    struct ifreq ifr = {0};
+#include "absl/strings/str_format.h"
 
-    fd_ = open("/dev/net/tap", O_RDWR);
-    if (fd_ < 0) {
-        return absl::InternalError("Cannot open TUN/TAP device.");
-    }
+absl::Status TapDevice::Init(std::string name, std::string address,
+                             std::string route) {
+  // First, create tap device.
+  struct ifreq ifr = {0};
 
-    ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-    strncpy(ifr.ifr_name, path.c_str(), IFNAMSIZ - 1);
+  fd_ = open("/dev/net/tap", O_RDWR);
+  if (fd_ < 0) {
+    return absl::InternalError("Cannot open TUN/TAP device.");
+  }
 
-    if (ioctl(fd_, TUNSETIFF, reinterpret_cast<void *>(&ifr)) < 0) {
-        close(fd_);
-        return absl::InternalError("ioctl TUNSETIFF failed.");
-    }
+  ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
+  strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ - 1);
 
-    name_ = std::string(ifr.ifr_name);
-    return absl::OkStatus();
+  if (ioctl(fd_, TUNSETIFF, reinterpret_cast<void *>(&ifr)) < 0) {
+    close(fd_);
+    return absl::InternalError("ioctl TUNSETIFF failed.");
+  }
+
+  name_ = std::string(ifr.ifr_name);
+
+  // Bring up the interface.
+  int ret = system(absl::StrFormat("ip link set dev %s up", name_).c_str());
+  if (ret != 0) return absl::InternalError("Failed to set interface");
+
+  // Add a new route.
+  ret = system(absl::StrFormat("ip route add dev %s %s", name_, route).c_str());
+  if (ret != 0) return absl::InternalError("Failed to add route");
+
+  // Assign an IP address.
+  ret = system(absl::StrFormat("ip address add dev %s local %s", name_,
+              address).c_str());
+  if (ret != 0) return absl::InternalError("Failed to set adress");
+
+  return absl::OkStatus();
 }
 
 template <class T>
 int TapDevice::Read(T buf, size_t length) {
-    return read(fd_, buf, length);
+  return read(fd_, buf, length);
 }
 
 template <class T>
 int TapDevice::Write(T buf, size_t length) {
-    return write(fd_, buf, length);
+  return write(fd_, buf, length);
 }

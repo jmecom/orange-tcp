@@ -1,3 +1,5 @@
+build --color=yes
+
 # --config=asan
 build:asan --strip=never
 build:asan --copt -fsanitize=address

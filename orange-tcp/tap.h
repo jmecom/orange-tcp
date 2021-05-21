@@ -10,10 +10,11 @@ class TapDevice {
   }
 
   // Create a TAP device using the file at the specified `path`.
-  // `path` should be in an interface in /dev/net; for example
-  // /dev/net/tap/tap0.
-  // Returns true upon success.
-  absl::Status Create(std::string path);
+  // After the TAP device is created, an interface will be created
+  // and assigned the supplied `address`.
+  absl::Status Init(std::string path,
+                    std::string address = "10.0.0.1",
+                    std::string route = "10.0.0.0/24");
 
   template <class T>
   int Read(T buf, size_t length);
