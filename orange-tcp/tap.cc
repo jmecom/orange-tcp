@@ -28,7 +28,8 @@ absl::Status TapDevice::Init(std::string name, std::string address,
 
   if (ioctl(fd_, TUNSETIFF, reinterpret_cast<void *>(&ifr)) < 0) {
     close(fd_);
-    return absl::InternalError("ioctl TUNSETIFF failed.");
+    return absl::InternalError(absl::StrFormat("ioctl TUNSETIFF failed ('%s')",
+                               strerror(errno)));
   }
 
   name_ = std::string(ifr.ifr_name);
@@ -49,12 +50,10 @@ absl::Status TapDevice::Init(std::string name, std::string address,
   return absl::OkStatus();
 }
 
-template <class T>
-int TapDevice::Read(T buf, size_t length) {
+int TapDevice::Read(void *buf, size_t length) {
   return read(fd_, buf, length);
 }
 
-template <class T>
-int TapDevice::Write(T buf, size_t length) {
+int TapDevice::Write(void *buf, size_t length) {
   return write(fd_, buf, length);
 }

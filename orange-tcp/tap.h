@@ -16,11 +16,9 @@ class TapDevice {
                     std::string address = "10.0.0.1",
                     std::string route = "10.0.0.0/24");
 
-  template <class T>
-  int Read(T buf, size_t length);
-
-  template <class T>
-  int Write(T buf, size_t length);
+  // Blocking.
+  int Read(void *buf, size_t length);
+  int Write(void *buf, size_t length);
 
  private:
   int fd_;
