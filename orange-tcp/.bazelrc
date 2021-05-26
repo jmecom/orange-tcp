@@ -1,5 +1,7 @@
 build --color=yes
 
+build --cxxopt='-std=c++14'
+
 # --config=asan
 build:asan --strip=never
 build:asan --copt -fsanitize=address
