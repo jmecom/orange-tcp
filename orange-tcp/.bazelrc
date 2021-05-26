@@ -1,6 +1,6 @@
 build --color=yes
 
-build --cxxopt='-std=c++14'
+build --cxxopt='-std=c++20'
 
 # --config=asan
 build:asan --strip=never
