@@ -1,12 +1,26 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
 cc_library(
-  name = "status_macros",
-  hdrs = ["status_macros.h"],
+  name = "absl",
   deps = [
+    "@com_google_absl//absl/strings",
     "@com_google_absl//absl/status",
     "@com_google_absl//absl/status:statusor",
   ]
+)
+
+cc_binary(
+  name = "arping",
+  srcs = ["arping.cc"],
+  deps = [
+    ":arp",
+    ":absl",
+  ]
+)
+
+cc_library(
+  name = "net",
+  hdrs = ["net.h"],
 )
 
 cc_library(
@@ -14,9 +28,9 @@ cc_library(
   srcs = ["arp.cc"],
   hdrs = ["arp.h"],
   deps = [
-    "@com_google_absl//absl/status",
     ":socket",
-    ":status_macros",
+    ":net",
+    ":absl",
   ],
 )
 
@@ -25,7 +39,7 @@ cc_library(
   srcs = ["socket.cc"],
   hdrs = ["socket.h"],
   deps = [
-    "@com_google_absl//absl/status:statusor",
-    "@com_google_absl//absl/strings",
+    ":net",
+    ":absl",
   ],
 )
