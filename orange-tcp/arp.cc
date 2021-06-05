@@ -36,25 +36,20 @@ absl::Status Arp::Request(const uint8_t(&ip_addr)[kIpAddrLen],
   memcpy(arp_request.dst_hw_addr, kBroadcastMac, kMacAddrLen);
   memcpy(arp_request.dst_ip_addr, kBroadcastIp, kIpAddrLen);
 
-  // TODO(jmecom) Refactor
-
-  EthernetFrame frame;
-  memcpy(frame.src_mac, arp_request.src_hw_addr, kMacAddrLen);
-  memcpy(frame.dst_mac, kBroadcastMac, kMacAddrLen);
-  frame.ether_type = EtherType::kArp;
-  frame.data = (uint8_t*)malloc(1500); //sizeof(arp_request));  // TODO(jmecom) Don't do this!!
-  memcpy(frame.data, static_cast<void *>(&arp_request), sizeof(arp_request));
+  auto frame = MakeEthernetFrame(arp_request.src_hw_addr,
+    kBroadcastMac, reinterpret_cast<uint8_t *>(&arp_request),
+    sizeof(arp_request));
+  if (!frame) return absl::InternalError("Failed to make ethernet frame");
+  frame->ether_type = EtherType::kArp;
 
   Address addr;
   memcpy(addr.ip_addr, kBroadcastIp, kIpAddrLen);
 
-  if (socket->SendTo(static_cast<void *>(&frame), sizeof(frame), addr) == -1) {
-    free(frame.data);
+  if (socket->SendTo(static_cast<void *>(frame.get()),
+                     sizeof(frame), addr) == -1) {
     return absl::InternalError(absl::StrFormat("Send failed ('%s')",
       strerror(errno)));
   }
-
-  free(frame.data);
 
   return absl::OkStatus();
 }

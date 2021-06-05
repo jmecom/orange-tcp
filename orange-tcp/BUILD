@@ -21,6 +21,7 @@ cc_binary(
 cc_library(
   name = "net",
   hdrs = ["net.h"],
+  srcs = ["net.cc"]
 )
 
 cc_library(
