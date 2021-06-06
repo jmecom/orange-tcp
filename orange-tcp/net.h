@@ -11,7 +11,7 @@ namespace orange_tcp {
 constexpr int kMacAddrLen = 6;
 constexpr int kIpAddrLen = 4;
 
-enum EtherType {
+enum EtherType : uint16_t {
   kArp = 0x0806,
   kIp = 0x0800,
 };

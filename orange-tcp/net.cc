@@ -12,17 +12,18 @@ std::vector<uint8_t> EthernetFrame::Pack() {
 
   assert(packed.size() < kEthernetMaxMtu);
 
-  int off = 0;
+  size_t off = 0;
   memcpy(packed.data(), dst_mac_.addr, kMacAddrLen);
   off += kMacAddrLen;
   memcpy(packed.data() + off, src_mac_.addr, kMacAddrLen);
   off += kMacAddrLen;
-  auto et = htons((uint16_t) ether_type_);
+  auto et = htons(ether_type_);
   memcpy(packed.data() + off, &et, sizeof(uint16_t));
   off += sizeof(uint16_t);
   memcpy(packed.data() + off, data_.data(), data_.size());
+  off += data_.size();
 
-  assert(off < kEthernetMaxMtu);
+  assert(off == packed.size());
 
   return packed;
 }

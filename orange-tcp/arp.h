@@ -15,7 +15,7 @@ constexpr int kEthernetHwType = 6;
 // Only IP is supported.
 constexpr int kIpProtocolType = 2048;
 
-enum Opcodes {
+enum Opcode : uint16_t {
   kArpRequest = 1,
   kArpResponse = 2,
 };
@@ -26,7 +26,7 @@ class Packet {
   uint16_t p_type_;
   uint8_t hw_addr_len_;
   uint8_t p_len_;
-  uint16_t opcode_;
+  Opcode opcode_;
   MacAddr src_hw_addr_;
   IpAddr src_ip_addr_;
   MacAddr dst_hw_addr_;
