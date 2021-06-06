@@ -9,44 +9,73 @@
 #include "absl/strings/str_format.h"
 
 namespace orange_tcp {
+namespace arp {
 
-absl::Status Arp::Request(const uint8_t(&ip_addr)[kIpAddrLen],
-    uint8_t(&mac_addr)[kMacAddrLen]) {
+std::vector<uint8_t> Packet::Pack() {
+  auto hw_type = htons(hw_type_);
+  auto p_type = htons(p_type_);
+  auto opcode = htons(opcode_);
+
+  const int size =
+    sizeof(hw_type_) + sizeof(p_type_) + sizeof(hw_addr_len_) +
+    sizeof(p_len_) + sizeof(opcode_) + hw_addr_len_ * 2 + kIpAddrLen * 2;
+
+  std::vector<uint8_t> packed = std::vector<uint8_t>(size);
+  int off = 0;
+  memcpy(packed.data() + off, &hw_type, sizeof(hw_type));
+  off += sizeof(hw_type);
+  memcpy(packed.data() + off, &p_type, sizeof(p_type));
+  off += sizeof(p_type);
+  memcpy(packed.data() + off, &hw_addr_len_, sizeof(hw_addr_len_));
+  off += sizeof(hw_addr_len_);
+  memcpy(packed.data() + off, &p_len_, sizeof(p_len_));
+  off += sizeof(p_len_);
+  memcpy(packed.data() + off, &opcode, sizeof(opcode));
+  off += sizeof(opcode);
+
+  memcpy(packed.data() + off, src_hw_addr_.addr, hw_addr_len_);
+  off += hw_addr_len_;
+  memcpy(packed.data() + off, src_ip_addr_.addr, kIpAddrLen);
+  off += kIpAddrLen;
+
+  memcpy(packed.data() + off, dst_hw_addr_.addr, hw_addr_len_);
+  off += hw_addr_len_;
+  memcpy(packed.data() + off, dst_ip_addr_.addr, kIpAddrLen);
+  off += kIpAddrLen;
+
+  assert(off == size);
+
+  return packed;
+}
+
+absl::Status Request(const IpAddr &ip, const MacAddr &mac) {
   auto socket_result = Socket::Create();
   if (!socket_result.ok()) {
     return absl::InternalError("Failed to create socket");
   }
   std::unique_ptr<Socket> socket = std::move(socket_result.value());
 
-  Arp::Packet arp_request = {
-    .hw_type = htons(kEthernetHwType),
-    .p_type = htons(kIpProtocolType),
-    .hw_addr_len = kMacAddrLen,
-    .p_len = kIpAddrLen,
-    .opcode = htons(kArpRequest),
-  };
-
-  if (!socket->GetHostMacAddress(arp_request.src_hw_addr).ok()) {
+  auto mac_result = socket->GetHostMacAddress();
+  if (!mac_result.ok())
     return absl::InternalError("Failed to get source MAC address");
-  }
-  if (!socket->GetHostIpAddress(arp_request.src_ip_addr).ok()) {
+  auto src_mac = mac_result.value();
+
+  auto ip_result = socket->GetHostIpAddress();
+  if (!ip_result.ok())
     return absl::InternalError("Failed to get source IP address");
-  }
 
-  memcpy(arp_request.dst_hw_addr, kBroadcastMac, kMacAddrLen);
-  memcpy(arp_request.dst_ip_addr, kBroadcastIp, kIpAddrLen);
+  std::vector<uint8_t> arp_request = Packet(kEthernetHwType, kIpProtocolType,
+    kMacAddrLen, kIpAddrLen, kArpRequest, src_mac, ip_result.value(),
+    kBroadcastMac, kBroadcastIp).Pack();
 
-  auto frame = MakeEthernetFrame(arp_request.src_hw_addr,
-    kBroadcastMac, reinterpret_cast<uint8_t *>(&arp_request),
-    sizeof(arp_request));
-  if (!frame) return absl::InternalError("Failed to make ethernet frame");
-  frame->ether_type = EtherType::kArp;
+  std::vector<uint8_t> frame = EthernetFrame(kBroadcastMac,
+    src_mac, EtherType::kArp, arp_request.data(),
+    arp_request.size()).Pack();
 
-  Address addr;
-  memcpy(addr.ip_addr, kBroadcastIp, kIpAddrLen);
+  auto addr = Address(kBroadcastIp, 1234); // TODO(jmecom) Which port?
 
-  if (socket->SendTo(static_cast<void *>(frame.get()),
-                     sizeof(frame), addr) == -1) {
+  if (socket->SendTo(static_cast<void *>(frame.data()),
+                     frame.size(), addr) == -1) {
     return absl::InternalError(absl::StrFormat("Send failed ('%s')",
       strerror(errno)));
   }
@@ -54,4 +83,5 @@ absl::Status Arp::Request(const uint8_t(&ip_addr)[kIpAddrLen],
   return absl::OkStatus();
 }
 
+}  // namespace arp
 }  // namespace orange_tcp

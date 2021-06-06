@@ -7,12 +7,10 @@ namespace orange_tcp {
 namespace arping {
 
 int Main() {
-  auto arp = Arp();
+  IpAddr ip = {};
+  MacAddr mac = {};
 
-  const uint8_t ip_addr[kIpAddrLen] = {0};
-  uint8_t mac_addr[kMacAddrLen] = {0};
-
-  auto result = arp.Request(ip_addr, mac_addr);
+  auto result = arp::Request(ip, mac);
   if (!result.ok()) {
     printf("%s\n", absl::StrFormat("Arp request failed: %s",
       result.message()).c_str());

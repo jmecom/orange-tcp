@@ -47,7 +47,7 @@ ssize_t Socket::RecvFrom(void *buffer, size_t length, Address addr) {
   return recvfrom(fd_, buffer, length, 0, &src, &size);
 }
 
-absl::Status Socket::GetHostMacAddress(uint8_t(&addr_out)[kMacAddrLen]) {
+absl::StatusOr<MacAddr> Socket::GetHostMacAddress() {
   struct ifreq ifr;
 
   // Retrieve the ethernet interface index.
@@ -61,12 +61,13 @@ absl::Status Socket::GetHostMacAddress(uint8_t(&addr_out)[kMacAddrLen]) {
     return absl::InternalError("ioctl SIOCGIFHWADDR failed");
   }
 
-  memcpy(addr_out, ifr.ifr_hwaddr.sa_data, kMacAddrLen);
+  MacAddr mac = {};
+  memcpy(mac.addr, ifr.ifr_hwaddr.sa_data, kMacAddrLen);
 
-  return absl::OkStatus();
+  return mac;
 }
 
-absl::Status Socket::GetHostIpAddress(uint8_t(&addr_out)[kIpAddrLen]) {
+absl::StatusOr<IpAddr> Socket::GetHostIpAddress() {
   struct ifreq ifr;
   strncpy(ifr.ifr_name, kEthDevice, IFNAMSIZ);
   ifr.ifr_addr.sa_family = AF_INET;
@@ -75,9 +76,10 @@ absl::Status Socket::GetHostIpAddress(uint8_t(&addr_out)[kIpAddrLen]) {
     return absl::InternalError("ioctl SIOCGIFADDR failed");
   }
 
-  memcpy(addr_out, ifr.ifr_addr.sa_data, kIpAddrLen);
+  IpAddr ip = {};
+  memcpy(ip.addr, ifr.ifr_addr.sa_data, kIpAddrLen);
 
-  return absl::OkStatus();
+  return ip;
 }
 
 }  // namespace orange_tcp

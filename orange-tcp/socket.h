@@ -24,8 +24,8 @@ class Socket {
   ssize_t SendTo(void *buffer, size_t length, Address addr);
   ssize_t RecvFrom(void *buffer, size_t length, Address addr);
 
-  absl::Status GetHostMacAddress(uint8_t(&addr_out)[kMacAddrLen]);
-  absl::Status GetHostIpAddress(uint8_t(&addr_out)[kIpAddrLen]);
+  absl::StatusOr<MacAddr> GetHostMacAddress();
+  absl::StatusOr<IpAddr> GetHostIpAddress();
 
   const int fd() { return fd_; }
 

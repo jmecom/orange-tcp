@@ -11,14 +11,6 @@ namespace orange_tcp {
 constexpr int kMacAddrLen = 6;
 constexpr int kIpAddrLen = 4;
 
-const uint8_t kBroadcastMac[kMacAddrLen] = {
-  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
-};
-
-const uint8_t kBroadcastIp[kIpAddrLen] = {
-  0xFF, 0xFF, 0xFF, 0xFF,
-};
-
 enum EtherType {
   kArp = 0x0806,
   kIp = 0x0800,
@@ -26,20 +18,57 @@ enum EtherType {
 
 constexpr int kEthernetMaxMtu = 1500;
 
-// struct EthernetFrame {
-//   uint8_t dst_mac[kMacAddrLen];
-//   uint8_t src_mac[kMacAddrLen];
-//   uint16_t ether_type;
-//   std::vector<uint8_t> data;
-// } __attribute__((packed));
+struct MacAddr {
+  uint8_t addr[kMacAddrLen];
+};
 
-void *PackEthernetFrame(
-  const uint8_t(&dst_mac)[kMacAddrLen],
-  const uint8_t(&src_mac)[kMacAddrLen],
-  std::vector<uint8_t> data);
+struct IpAddr {
+  uint8_t addr[kIpAddrLen];
+};
+
+const MacAddr kBroadcastMac = {
+  .addr = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+};
+
+const IpAddr kBroadcastIp = {
+  .addr = {0xFF, 0xFF, 0xFF, 0xFF}
+};
+
+class EthernetFrame {
+ public:
+  EthernetFrame(
+    const MacAddr &dst_mac,
+    const MacAddr &src_mac,
+    EtherType ether_type = EtherType::kIp,
+    std::vector<uint8_t> data = std::vector<uint8_t>()) :
+      dst_mac_(dst_mac),
+      src_mac_(src_mac),
+      ether_type_(ether_type),
+      data_(data) {}
+
+  EthernetFrame(
+    const MacAddr &dst_mac,
+    const MacAddr &src_mac,
+    EtherType ether_type,
+    uint8_t *data, size_t size) :
+      dst_mac_(dst_mac),
+      src_mac_(src_mac),
+      ether_type_(ether_type),
+      data_(std::vector<uint8_t>(data, data + size)) {}
+
+  std::vector<uint8_t> Pack();
+
+ private:
+  MacAddr dst_mac_;
+  MacAddr src_mac_;
+  EtherType ether_type_;
+  std::vector<uint8_t> data_;
+};
 
 struct Address {
-  uint8_t ip_addr[kIpAddrLen];
+  Address(IpAddr addr, int port) :
+    addr(addr), port(port) {}
+  IpAddr addr;
   int port;
 
   void FillSockaddr(sockaddr_in *sai);
