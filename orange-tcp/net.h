@@ -70,8 +70,11 @@ struct Address {
     addr(addr), port(port) {}
   IpAddr addr;
   int port;
-
-  void FillSockaddr(sockaddr_in *sai);
 };
+
+inline void DumpHex(uint8_t *buffer, size_t size) {
+  for (size_t i = 0; i < size; i++) printf("%02x", buffer[i]);
+  printf("\n");
+}
 
 }  // namespace orange_tcp

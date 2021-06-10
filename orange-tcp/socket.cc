@@ -1,8 +1,6 @@
 #include "socket.h"
 
-#include <sys/socket.h>
 #include <arpa/inet.h>
-#include <net/ethernet.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
 
@@ -11,7 +9,8 @@
 namespace orange_tcp {
 
 absl::StatusOr<std::unique_ptr<Socket>> Socket::Create() {
-  int fd = socket(AF_PACKET, SOCK_RAW, ETH_P_ALL);
+  int fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+  // int fd = socket(AF_INET, SOCK_STREAM, 0);
   if (fd < 0) {
     return absl::InternalError(
       absl::StrFormat("Failed to create socket: %s",
@@ -21,6 +20,9 @@ absl::StatusOr<std::unique_ptr<Socket>> Socket::Create() {
   // TODO(jmecom) Needed?
   // int ret = setsockopt(fd, SOL_SOCKET, SO_BROADCAST,
   //   &broadcastEnable, sizeof(broadcastEnable));
+
+  // TODO(jmecom) Needed?
+  // setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, "eth0", 4);
 
   return std::make_unique<Socket>(fd);
 }
@@ -33,53 +35,89 @@ ssize_t Socket::Recv(void *buffer, size_t length) {
   return recv(fd_, buffer, length, 0);
 }
 
-ssize_t Socket::SendTo(void *buffer, size_t length, Address addr) {
-  sockaddr_in dest;
-  addr.FillSockaddr(&dest);
+ssize_t Socket::SendTo(void *buffer, size_t length, MacAddr dst) {
+  auto sock_result = MakeSockAddr(dst);
+  if (!sock_result.ok()) return -123;
+
+  struct sockaddr_ll ll = sock_result.value();
   return sendto(fd_, buffer, length, 0,
-    reinterpret_cast<sockaddr *>(&dest), sizeof(sockaddr_in));
+    reinterpret_cast<struct sockaddr *>(&ll), sizeof(ll));
 }
 
-ssize_t Socket::RecvFrom(void *buffer, size_t length, Address addr) {
-  sockaddr src;
-  addr.FillSockaddr(reinterpret_cast<sockaddr_in *>(&src));
-  socklen_t size = sizeof(sockaddr);
-  return recvfrom(fd_, buffer, length, 0, &src, &size);
+ssize_t Socket::RecvFrom(void *buffer, size_t length, MacAddr src) {
+  auto sock_result = MakeSockAddr(src);
+  if (!sock_result.ok()) return -123;
+
+  struct sockaddr_ll ll = sock_result.value();
+  socklen_t size = sizeof(ll);
+  return recvfrom(fd_, buffer, length, 0,
+    reinterpret_cast<struct sockaddr *>(&ll), &size);
+}
+
+absl::StatusOr<int> Socket::GetInterfaceIndex() {
+  static bool cached = false;
+  if (cached) return interface_index_;
+
+  struct ifreq ifr = {0};
+  strncpy(ifr.ifr_name, kEthDevice, IFNAMSIZ);
+  if (ioctl(fd_, SIOCGIFINDEX, &ifr) < 0) {
+    return absl::InternalError(strerror(errno));
+  }
+
+  interface_index_ = ifr.ifr_ifindex;
+  cached = true;
+  return interface_index_;
 }
 
 absl::StatusOr<MacAddr> Socket::GetHostMacAddress() {
-  struct ifreq ifr;
+  static bool cached = false;
+  if (cached) return host_mac_;
 
-  // Retrieve the ethernet interface index.
+  struct ifreq ifr = {0};
   strncpy(ifr.ifr_name, kEthDevice, IFNAMSIZ);
   if (ioctl(fd_, SIOCGIFINDEX, &ifr) < 0) {
-    return absl::InternalError("ioctl SIOCGIFINDEX failed");
+    return absl::InternalError(strerror(errno));
   }
-
-  // Retrieve corresponding MAC address.
   if (ioctl(fd_, SIOCGIFHWADDR, &ifr) < 0) {
-    return absl::InternalError("ioctl SIOCGIFHWADDR failed");
+    return absl::InternalError(strerror(errno));
   }
 
-  MacAddr mac = {};
-  memcpy(mac.addr, ifr.ifr_hwaddr.sa_data, kMacAddrLen);
+  memcpy(host_mac_.addr, ifr.ifr_hwaddr.sa_data, kMacAddrLen);
 
-  return mac;
+  return host_mac_;
 }
 
 absl::StatusOr<IpAddr> Socket::GetHostIpAddress() {
-  struct ifreq ifr;
+  static bool cached = false;
+  if (cached) return host_ip_;
+
+  struct ifreq ifr = {0};
   strncpy(ifr.ifr_name, kEthDevice, IFNAMSIZ);
   ifr.ifr_addr.sa_family = AF_INET;
 
   if (ioctl(fd_, SIOCGIFADDR, &ifr) < 0) {
-    return absl::InternalError("ioctl SIOCGIFADDR failed");
+    return absl::InternalError(strerror(errno));
   }
 
-  IpAddr ip = {};
-  memcpy(ip.addr, ifr.ifr_addr.sa_data, kIpAddrLen);
+  memcpy(host_ip_.addr, ifr.ifr_addr.sa_data, kIpAddrLen);
+  cached = true;
 
-  return ip;
+  return host_ip_;
+}
+
+absl::StatusOr<struct sockaddr_ll> Socket::MakeSockAddr(MacAddr dst) {
+  struct sockaddr_ll ll = {0};
+  ll.sll_family = AF_PACKET;
+
+  auto idx_result = GetInterfaceIndex();
+  if (!idx_result.ok()) {
+    return absl::InternalError("Failed to fill sockaddr");
+  }
+  ll.sll_ifindex = idx_result.value();
+
+  ll.sll_halen = kMacAddrLen;
+  memcpy(ll.sll_addr, dst.addr, kMacAddrLen);
+  return ll;
 }
 
 }  // namespace orange_tcp

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "net.h"
 
 #include <stdint.h>

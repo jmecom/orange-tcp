@@ -1,4 +1,10 @@
+#pragma once
+
 #include "net.h"
+
+#include <sys/socket.h>
+#include <linux/if_packet.h>
+#include <net/ethernet.h>
 
 #include <cstddef>
 #include <unistd.h>
@@ -21,8 +27,8 @@ class Socket {
   ssize_t Send(void *buffer, size_t length);
   ssize_t Recv(void *buffer, size_t length);
 
-  ssize_t SendTo(void *buffer, size_t length, Address addr);
-  ssize_t RecvFrom(void *buffer, size_t length, Address addr);
+  ssize_t SendTo(void *buffer, size_t length, MacAddr dst);
+  ssize_t RecvFrom(void *buffer, size_t length, MacAddr src);
 
   absl::StatusOr<MacAddr> GetHostMacAddress();
   absl::StatusOr<IpAddr> GetHostIpAddress();
@@ -30,11 +36,17 @@ class Socket {
   const int fd() { return fd_; }
 
  private:
+  absl::StatusOr<int> GetInterfaceIndex();
+  absl::StatusOr<struct sockaddr_ll> MakeSockAddr(MacAddr dst);
+
   int fd_;
+
+  MacAddr host_mac_;
+  IpAddr host_ip_;
+  int interface_index_;
 
   // TODO(jmecom) Shouldn't be hardcoded, but good enough for now.
   const char *kEthDevice = "eth0";
 };
-
 
 }  // namespace orange_tcp

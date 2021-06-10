@@ -72,10 +72,8 @@ absl::Status Request(const IpAddr &ip, const MacAddr &mac) {
     src_mac, EtherType::kArp, arp_request.data(),
     arp_request.size()).Pack();
 
-  auto addr = Address(kBroadcastIp, 1234); // TODO(jmecom) Which port?
-
   if (socket->SendTo(static_cast<void *>(frame.data()),
-                     frame.size(), addr) == -1) {
+                     frame.size(), kBroadcastMac) == -1) {
     return absl::InternalError(absl::StrFormat("Send failed ('%s')",
       strerror(errno)));
   }

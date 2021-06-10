@@ -17,6 +17,7 @@ int Main() {
     return -1;
   }
 
+  printf("done\n");
   return 0;
 }
 

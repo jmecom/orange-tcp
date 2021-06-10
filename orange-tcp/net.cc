@@ -28,13 +28,4 @@ std::vector<uint8_t> EthernetFrame::Pack() {
   return packed;
 }
 
-void Address::FillSockaddr(sockaddr_in *sai) {
-  const uint8_t *ip = addr.addr;
-  sai->sin_family = AF_INET;
-  // TODO(jmecom) Check.
-  uint32_t i = ip[0] | (ip[1] << 8) | (ip[2] << 16) | (ip[3] << 24);
-  sai->sin_addr.s_addr = htonl(i);
-  sai->sin_port = htons(port);
-}
-
 }  // namespace orange_tcp
