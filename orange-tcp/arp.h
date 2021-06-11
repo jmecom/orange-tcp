@@ -12,30 +12,25 @@ namespace orange_tcp {
 namespace arp {
 
 // Only IEEE 802.3 Ethernet is supported.
-constexpr int kEthernetHwType = 6;
+const uint16_net kEthernetHwType = uint16_net(6);
 
 // Only IP is supported.
-constexpr int kIpProtocolType = 2048;
+const uint16_net kIpProtocolType = uint16_net(2048);
 
-enum Opcode : uint16_t {
-  kArpRequest = 1,
-  kArpResponse = 2,
-};
+const uint16_net kArpRequest = uint16_net(1);
+const uint16_net kArpResponse = uint16_net(2);
 
-class Packet {
- public:
-  uint16_t hw_type_;
-  uint16_t p_type_;
-  uint8_t hw_addr_len_;
-  uint8_t p_len_;
-  Opcode opcode_;
-  MacAddr src_hw_addr_;
-  IpAddr src_ip_addr_;
-  MacAddr dst_hw_addr_;
-  IpAddr dst_ip_addr_;
-
-  std::vector<uint8_t> Pack();
-};
+struct Packet {
+  uint16_net hw_type;
+  uint16_net p_type;
+  uint8_t hw_addr_len;
+  uint8_t p_len;
+  uint16_net opcode;
+  MacAddr src_hw_addr;
+  IpAddr src_ip_addr;
+  MacAddr dst_hw_addr;
+  IpAddr dst_ip_addr;
+} __attribute__((packed));
 
 absl::Status Request(const IpAddr &ip, const MacAddr &mac);
 absl::Status Response();

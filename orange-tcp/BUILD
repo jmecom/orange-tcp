@@ -20,8 +20,7 @@ cc_binary(
 
 cc_library(
   name = "net",
-  hdrs = ["net.h"],
-  srcs = ["net.cc"]
+  hdrs = ["net.h", "netint.h"],
 )
 
 cc_library(

@@ -11,43 +11,6 @@
 namespace orange_tcp {
 namespace arp {
 
-std::vector<uint8_t> Packet::Pack() {
-  auto hw_type = htons(hw_type_);
-  auto p_type = htons(p_type_);
-  auto opcode = htons(opcode_);
-
-  const int size =
-    sizeof(hw_type_) + sizeof(p_type_) + sizeof(hw_addr_len_) +
-    sizeof(p_len_) + sizeof(opcode_) + hw_addr_len_ * 2 + kIpAddrLen * 2;
-
-  std::vector<uint8_t> packed = std::vector<uint8_t>(size);
-  int off = 0;
-  memcpy(packed.data() + off, &hw_type, sizeof(hw_type));
-  off += sizeof(hw_type);
-  memcpy(packed.data() + off, &p_type, sizeof(p_type));
-  off += sizeof(p_type);
-  memcpy(packed.data() + off, &hw_addr_len_, sizeof(hw_addr_len_));
-  off += sizeof(hw_addr_len_);
-  memcpy(packed.data() + off, &p_len_, sizeof(p_len_));
-  off += sizeof(p_len_);
-  memcpy(packed.data() + off, &opcode, sizeof(opcode));
-  off += sizeof(opcode);
-
-  memcpy(packed.data() + off, src_hw_addr_.addr, hw_addr_len_);
-  off += hw_addr_len_;
-  memcpy(packed.data() + off, src_ip_addr_.addr, kIpAddrLen);
-  off += kIpAddrLen;
-
-  memcpy(packed.data() + off, dst_hw_addr_.addr, hw_addr_len_);
-  off += hw_addr_len_;
-  memcpy(packed.data() + off, dst_ip_addr_.addr, kIpAddrLen);
-  off += kIpAddrLen;
-
-  assert(off == size);
-
-  return packed;
-}
-
 absl::Status Request(const IpAddr &ip, const MacAddr &mac) {
   auto socket_result = Socket::Create();
   if (!socket_result.ok()) {
@@ -64,16 +27,15 @@ absl::Status Request(const IpAddr &ip, const MacAddr &mac) {
   if (!ip_result.ok())
     return absl::InternalError("Failed to get source IP address");
 
-  std::vector<uint8_t> arp_request = Packet(kEthernetHwType, kIpProtocolType,
+  Packet arp_request = Packet(kEthernetHwType, kIpProtocolType,
     kMacAddrLen, kIpAddrLen, kArpRequest, src_mac, ip_result.value(),
-    kBroadcastMac, kBroadcastIp).Pack();
+    kBroadcastMac, kBroadcastIp);
 
-  std::vector<uint8_t> frame = EthernetFrame(kBroadcastMac,
-    src_mac, EtherType::kArp, arp_request.data(),
-    arp_request.size()).Pack();
+  EthernetFrame frame = EthernetFrame(kBroadcastMac, src_mac, kEtherTypeArp);
+  memcpy(frame.data, &arp_request, sizeof(arp_request));
 
-  if (socket->SendTo(static_cast<void *>(frame.data()),
-                     frame.size(), kBroadcastMac) == -1) {
+  if (socket->SendTo(static_cast<void *>(&frame),
+                     sizeof(frame), kBroadcastMac) == -1) {
     return absl::InternalError(absl::StrFormat("Send failed ('%s')",
       strerror(errno)));
   }
