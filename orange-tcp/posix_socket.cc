@@ -8,7 +8,7 @@
 
 namespace orange_tcp {
 
-absl::StatusOr<std::unique_ptr<Socket>> Socket::Create() {
+absl::StatusOr<std::unique_ptr<Socket>> PosixSocket::Create() {
   int fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   // int fd = socket(AF_INET, SOCK_STREAM, 0);
   if (fd < 0) {
@@ -24,18 +24,18 @@ absl::StatusOr<std::unique_ptr<Socket>> Socket::Create() {
   // TODO(jmecom) Needed?
   // setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, "eth0", 4);
 
-  return std::make_unique<Socket>(fd);
+  return std::make_unique<PosixSocket>(fd);
 }
 
-ssize_t Socket::Send(void *buffer, size_t length) {
+ssize_t PosixSocket::Send(void *buffer, size_t length) {
   return send(fd_, buffer, length, 0);
 }
 
-ssize_t Socket::Recv(void *buffer, size_t length) {
+ssize_t PosixSocket::Recv(void *buffer, size_t length) {
   return recv(fd_, buffer, length, 0);
 }
 
-ssize_t Socket::SendTo(void *buffer, size_t length, MacAddr dst) {
+ssize_t PosixSocket::SendTo(void *buffer, size_t length, MacAddr dst) {
   auto sock_result = MakeSockAddr(dst);
   if (!sock_result.ok()) return -123;
 
@@ -44,7 +44,7 @@ ssize_t Socket::SendTo(void *buffer, size_t length, MacAddr dst) {
     reinterpret_cast<struct sockaddr *>(&ll), sizeof(ll));
 }
 
-ssize_t Socket::RecvFrom(void *buffer, size_t length, MacAddr src) {
+ssize_t PosixSocket::RecvFrom(void *buffer, size_t length, MacAddr src) {
   auto sock_result = MakeSockAddr(src);
   if (!sock_result.ok()) return -123;
 
@@ -54,7 +54,7 @@ ssize_t Socket::RecvFrom(void *buffer, size_t length, MacAddr src) {
     reinterpret_cast<struct sockaddr *>(&ll), &size);
 }
 
-absl::StatusOr<int> Socket::GetInterfaceIndex() {
+absl::StatusOr<int> PosixSocket::GetInterfaceIndex() {
   static bool cached = false;
   if (cached) return interface_index_;
 
@@ -69,7 +69,7 @@ absl::StatusOr<int> Socket::GetInterfaceIndex() {
   return interface_index_;
 }
 
-absl::StatusOr<MacAddr> Socket::GetHostMacAddress() {
+absl::StatusOr<MacAddr> PosixSocket::GetHostMacAddress() {
   static bool cached = false;
   if (cached) return host_mac_;
 
@@ -87,7 +87,7 @@ absl::StatusOr<MacAddr> Socket::GetHostMacAddress() {
   return host_mac_;
 }
 
-absl::StatusOr<IpAddr> Socket::GetHostIpAddress() {
+absl::StatusOr<IpAddr> PosixSocket::GetHostIpAddress() {
   static bool cached = false;
   if (cached) return host_ip_;
 
@@ -105,7 +105,7 @@ absl::StatusOr<IpAddr> Socket::GetHostIpAddress() {
   return host_ip_;
 }
 
-absl::StatusOr<struct sockaddr_ll> Socket::MakeSockAddr(MacAddr dst) {
+absl::StatusOr<struct sockaddr_ll> PosixSocket::MakeSockAddr(MacAddr dst) {
   struct sockaddr_ll ll = {0};
   ll.sll_family = AF_PACKET;
 

@@ -36,10 +36,23 @@ cc_library(
 
 cc_library(
   name = "socket",
-  srcs = ["socket.cc"],
+  srcs = ["posix_socket.cc"],
   hdrs = ["socket.h"],
   deps = [
     ":net",
     ":absl",
   ],
 )
+
+cc_library(
+  name = "network_sim",
+  hdrs = ["network_sim.h"],
+  srcs = ["network_sim.cc"],
+  deps = [
+    ":net",
+    ":socket",
+    ":absl"
+  ],
+  testonly = 1,
+)
+

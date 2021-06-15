@@ -15,14 +15,26 @@
 
 namespace orange_tcp {
 
-// A wrapper around standard socket-related syscalls, allowing for
-// unit-testability.
 class Socket {
+ public:
+  virtual ~Socket() = default;
+
+  virtual ssize_t Send(void *buffer, size_t length) = 0;
+  virtual ssize_t Recv(void *buffer, size_t length) = 0;
+
+  virtual ssize_t SendTo(void *buffer, size_t length, MacAddr dst) = 0;
+  virtual ssize_t RecvFrom(void *buffer, size_t length, MacAddr src) = 0;
+
+  virtual absl::StatusOr<MacAddr> GetHostMacAddress() = 0;
+  virtual absl::StatusOr<IpAddr> GetHostIpAddress() = 0;
+};
+
+class PosixSocket : public Socket {
  public:
   static absl::StatusOr<std::unique_ptr<Socket>> Create();
 
   // Prefer factory function Create() instead of using constructor.
-  explicit Socket(int fd) : fd_(fd) {}
+  explicit PosixSocket(int fd) : fd_(fd) {}
 
   ssize_t Send(void *buffer, size_t length);
   ssize_t Recv(void *buffer, size_t length);
@@ -32,8 +44,6 @@ class Socket {
 
   absl::StatusOr<MacAddr> GetHostMacAddress();
   absl::StatusOr<IpAddr> GetHostIpAddress();
-
-  const int fd() { return fd_; }
 
  private:
   absl::StatusOr<int> GetInterfaceIndex();

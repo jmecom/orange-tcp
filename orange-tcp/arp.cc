@@ -1,5 +1,4 @@
 #include "arp.h"
-#include "socket.h"
 #include "net.h"
 
 #include <arpa/inet.h>
@@ -11,13 +10,8 @@
 namespace orange_tcp {
 namespace arp {
 
-absl::Status Request(const IpAddr &ip, const MacAddr &mac) {
-  auto socket_result = Socket::Create();
-  if (!socket_result.ok()) {
-    return absl::InternalError("Failed to create socket");
-  }
-  std::unique_ptr<Socket> socket = std::move(socket_result.value());
-
+absl::Status Request(Socket *socket,
+                     const IpAddr &ip, const MacAddr &mac) {
   auto mac_result = socket->GetHostMacAddress();
   if (!mac_result.ok())
     return absl::InternalError("Failed to get source MAC address");

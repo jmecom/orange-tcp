@@ -5,6 +5,8 @@
 
 #include <memory>
 #include <vector>
+#include <string>
+#include <cstring>
 
 #include "netint.h"
 
@@ -15,10 +17,18 @@ constexpr int kIpAddrLen = 4;
 
 struct MacAddr {
   uint8_t addr[kMacAddrLen];
+
+  bool operator==(const MacAddr& other) {
+    return (memcmp(addr, other.addr, kMacAddrLen) == 0);
+  }
 };
 
 struct IpAddr {
   uint8_t addr[kIpAddrLen];
+
+  bool operator==(const IpAddr& other) {
+    return (memcmp(addr, other.addr, kIpAddrLen) == 0);
+  }
 };
 
 const MacAddr kBroadcastMac = {
@@ -51,6 +61,12 @@ struct Address {
 inline void DumpHex(uint8_t *buffer, size_t size) {
   for (size_t i = 0; i < size; i++) printf("%02x", buffer[i]);
   printf("\n");
+}
+
+inline void Die(std::string message) {
+  puts(message.c_str());
+  fflush(stdout);
+  abort();
 }
 
 }  // namespace orange_tcp

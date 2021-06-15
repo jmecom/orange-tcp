@@ -1,6 +1,7 @@
 #pragma once
 
 #include "net.h"
+#include "socket.h"
 
 #include <stdint.h>
 #include <map>
@@ -32,7 +33,8 @@ struct Packet {
   IpAddr dst_ip_addr;
 } __attribute__((packed));
 
-absl::Status Request(const IpAddr &ip, const MacAddr &mac);
+absl::Status Request(Socket *socket,
+                     const IpAddr &ip, const MacAddr &mac);
 absl::Status Response();
 
 class Cache {
