@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
 #include <memory>
-#include <queue>
+#include <deque>
+#include <vector>
 #include <map>
 
 #include "net.h"
@@ -13,22 +13,6 @@
 
 namespace orange_tcp {
 
-class MessageQueue {
- public:
-  void Push(std::vector<uint8_t> vec) {
-    message_queue_.push(vec);
-  }
-
-  std::vector<uint8_t> Pop() {
-    auto result = message_queue_.front();
-    message_queue_.pop();
-    return result;
-  }
-
- private:
-  std::queue<std::vector<uint8_t>> message_queue_;
-};
-
 class Host {
  public:
   explicit Host(IpAddr ip, MacAddr mac) :
@@ -36,12 +20,20 @@ class Host {
 
   void Push(MacAddr sender, std::vector<uint8_t> data) {
     if (!queues_.contains(sender)) Die("Sender not found");
-    queues_[sender].Push(data);
+    auto q = queues_[sender];
+    q.insert(q.end(), data.begin(), data.end());
   }
 
-  std::vector<uint8_t> Pop(MacAddr sender) {
+  std::vector<uint8_t> Pop(MacAddr sender, size_t length) {
     if (!queues_.contains(sender)) Die("Sender not found");
-    return queues_[sender].Pop();
+    auto q = queues_[sender];
+    if (length > q.size()) Die("Specified length too large");
+    std::vector<uint8_t> result;
+    for (size_t i = 0; i < length; i++) {
+      result.push_back(q.front());
+      q.pop_front();
+    }
+    return result;
   }
 
   const MacAddr mac() { return mac_; }
@@ -51,7 +43,7 @@ class Host {
   MacAddr mac_;
 
   // Queues holding data waiting to be received on this host.
-  std::map<MacAddr, MessageQueue> queues_;
+  std::map<MacAddr, std::deque<uint8_t>> queues_;
 };
 
 class SimulatedNetwork {

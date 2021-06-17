@@ -9,6 +9,13 @@ cc_library(
   ]
 )
 
+cc_library(
+  name = "gtest",
+  deps = [
+    "@com_google_googletest//:gtest_main"
+  ]
+)
+
 cc_binary(
   name = "arping",
   srcs = ["arping.cc"],
@@ -56,3 +63,11 @@ cc_library(
   testonly = 1,
 )
 
+cc_test(
+  name = "arp_test",
+  srcs = ["arp_test.cc"],
+  deps = [
+    ":network_sim",
+    ":gtest",
+  ]
+)

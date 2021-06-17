@@ -1,5 +1,7 @@
 #include "network_sim.h"
 
+#include <vector>
+
 namespace orange_tcp {
 
 ssize_t FakeSocket::Send(void *buffer, size_t length) {
@@ -20,8 +22,8 @@ ssize_t FakeSocket::SendTo(void *buffer, size_t length, MacAddr dst) {
 
 ssize_t FakeSocket::RecvFrom(void *buffer, size_t length, MacAddr src) {
   Host *self = network_->HostForMac(host_mac_);
-  std::vector<uint8_t> received = self->Pop(src);
-  memcpy(buffer,)
+  std::vector<uint8_t> received = self->Pop(src, length);
+  memcpy(buffer, received.data(), length);
   return length;
 }
 
