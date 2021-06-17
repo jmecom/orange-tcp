@@ -9,6 +9,7 @@ ssize_t FakeSocket::Recv(void *buffer, size_t length) {
   return -1;
 }
 
+// TODO(jmecom) Check blocking / nonblocking?
 ssize_t FakeSocket::SendTo(void *buffer, size_t length, MacAddr dst) {
   Host *recipient = network_->HostForMac(dst);
   uint8_t *b = static_cast<uint8_t *>(buffer);
@@ -18,7 +19,10 @@ ssize_t FakeSocket::SendTo(void *buffer, size_t length, MacAddr dst) {
 }
 
 ssize_t FakeSocket::RecvFrom(void *buffer, size_t length, MacAddr src) {
-
+  Host *self = network_->HostForMac(host_mac_);
+  std::vector<uint8_t> received = self->Pop(src);
+  memcpy(buffer,)
+  return length;
 }
 
 }  // namespace orange_tcp

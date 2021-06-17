@@ -17,9 +17,11 @@ constexpr int kIpAddrLen = 4;
 
 struct MacAddr {
   uint8_t addr[kMacAddrLen];
-
-  bool operator==(const MacAddr& other) {
+  bool operator==(const MacAddr& other) const {
     return (memcmp(addr, other.addr, kMacAddrLen) == 0);
+  }
+  bool operator<(const MacAddr& other) const {
+    return (memcmp(addr, other.addr, kMacAddrLen) < 0);
   }
 };
 

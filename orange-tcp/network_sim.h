@@ -16,17 +16,17 @@ namespace orange_tcp {
 class MessageQueue {
  public:
   void Push(std::vector<uint8_t> vec) {
-    message_queue.push(vec);
+    message_queue_.push(vec);
   }
 
   std::vector<uint8_t> Pop() {
-    auto result = message_queue.front();
-    message_queue.pop();
+    auto result = message_queue_.front();
+    message_queue_.pop();
     return result;
   }
 
  private:
-  std::queue<std::vector<uint8_t>> message_queue;
+  std::queue<std::vector<uint8_t>> message_queue_;
 };
 
 class Host {
@@ -35,11 +35,13 @@ class Host {
     ip_(ip), mac_(mac) {}
 
   void Push(MacAddr sender, std::vector<uint8_t> data) {
-
+    if (!queues_.contains(sender)) Die("Sender not found");
+    queues_[sender].Push(data);
   }
 
-  std::vector<uint8_t> Pop() {
-
+  std::vector<uint8_t> Pop(MacAddr sender) {
+    if (!queues_.contains(sender)) Die("Sender not found");
+    return queues_[sender].Pop();
   }
 
   const MacAddr mac() { return mac_; }
@@ -49,7 +51,7 @@ class Host {
   MacAddr mac_;
 
   // Queues holding data waiting to be received on this host.
-  std::map<MacAddr, MessageQueue> queues;
+  std::map<MacAddr, MessageQueue> queues_;
 };
 
 class SimulatedNetwork {
