@@ -36,6 +36,7 @@ TEST_F(ArpTest, RequestResponse) {
   auto sock1 = std::make_unique<FakeSocket>(network_.get(), mac1, ip1);
   auto sock2 = std::make_unique<FakeSocket>(network_.get(), mac2, ip2);
 
+  // TODO(jmecom) left off here. Need to actually test.
   EXPECT_EQ(arp::Request(sock1.get(), ip2, mac2), absl::OkStatus());
 }
 

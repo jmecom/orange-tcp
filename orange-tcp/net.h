@@ -27,7 +27,7 @@ struct MacAddr {
     return (memcmp(addr, other.addr, kMacAddrLen) < 0);
   }
 
-  std::string ToString() {
+  std::string ToString() const {
     return absl::StrFormat("%x:%x:%x:%x:%x:%x",
       addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
   }
@@ -36,11 +36,11 @@ struct MacAddr {
 struct IpAddr {
   uint8_t addr[kIpAddrLen];
 
-  bool operator==(const IpAddr& other) {
+  bool operator==(const IpAddr& other) const {
     return (memcmp(addr, other.addr, kIpAddrLen) == 0);
   }
 
-  std::string ToString() {
+  std::string ToString() const {
     return absl::StrFormat("%x:%x:%x:%x",
       addr[0], addr[1], addr[2], addr[3]);
   }

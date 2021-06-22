@@ -22,7 +22,6 @@ ssize_t FakeSocket::SendTo(void *buffer, size_t length, MacAddr dst) {
     }
   } else {
     Host *recipient = network_->HostForMac(dst);
-    printf("%s !!\n", host_mac_.ToString().c_str());
     recipient->Push(host_mac_, data);
   }
 

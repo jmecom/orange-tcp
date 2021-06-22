@@ -28,18 +28,17 @@ class Host {
     ip_(ip), mac_(mac) {}
 
   void Push(MacAddr sender, std::vector<uint8_t> data) {
-    if (!queues_.contains(sender))
-      throw std::invalid_argument(absl::StrFormat("Sender %s not found (push)",
-        sender.ToString()));
-    auto q = queues_[sender];
-    q.insert(q.end(), data.begin(), data.end());
+    if (sender == kBroadcastMac) {
+      for (auto &[mac, q] : queues_)
+        q.insert(q.end(), data.begin(), data.end());
+    } else {
+      // Sender is automatically added to queues_ if not present.
+      auto q = queues_[sender];
+      q.insert(q.end(), data.begin(), data.end());
+    }
   }
 
   std::vector<uint8_t> Pop(MacAddr sender, size_t length) {
-    if (!queues_.contains(sender))
-      throw std::invalid_argument(absl::StrFormat("Sender %s not found (pop)",
-        sender.ToString()));
-
     auto q = queues_[sender];
 
     if (length > q.size())
