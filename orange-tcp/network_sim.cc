@@ -13,10 +13,19 @@ ssize_t FakeSocket::Recv(void *buffer, size_t length) {
 
 // TODO(jmecom) Check blocking / nonblocking?
 ssize_t FakeSocket::SendTo(void *buffer, size_t length, MacAddr dst) {
-  Host *recipient = network_->HostForMac(dst);
   uint8_t *b = static_cast<uint8_t *>(buffer);
-  std::vector<uint8_t> vec(b, b + length);
-  recipient->Push(host_mac_, vec);
+  std::vector<uint8_t> data(b, b + length);
+
+  if (dst == kBroadcastMac) {
+    for (auto& host : network_->AllHosts()) {
+      host->Push(host_mac_, data);
+    }
+  } else {
+    Host *recipient = network_->HostForMac(dst);
+    printf("%s !!\n", host_mac_.ToString().c_str());
+    recipient->Push(host_mac_, data);
+  }
+
   return length;
 }
 

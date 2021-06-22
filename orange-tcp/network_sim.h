@@ -4,14 +4,23 @@
 #include <deque>
 #include <vector>
 #include <map>
+#include <utility>
 
 #include "net.h"
 #include "socket.h"
 
 #include "absl/status/statusor.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 
 namespace orange_tcp {
+
+IpAddr RandomIp() {
+  srand(1);
+  IpAddr ip;
+  for (int i = 0; i < kIpAddrLen; i++) ip.addr[i] = rand();
+  return ip;
+}
 
 class Host {
  public:
@@ -19,15 +28,23 @@ class Host {
     ip_(ip), mac_(mac) {}
 
   void Push(MacAddr sender, std::vector<uint8_t> data) {
-    if (!queues_.contains(sender)) Die("Sender not found");
+    if (!queues_.contains(sender))
+      throw std::invalid_argument(absl::StrFormat("Sender %s not found (push)",
+        sender.ToString()));
     auto q = queues_[sender];
     q.insert(q.end(), data.begin(), data.end());
   }
 
   std::vector<uint8_t> Pop(MacAddr sender, size_t length) {
-    if (!queues_.contains(sender)) Die("Sender not found");
+    if (!queues_.contains(sender))
+      throw std::invalid_argument(absl::StrFormat("Sender %s not found (pop)",
+        sender.ToString()));
+
     auto q = queues_[sender];
-    if (length > q.size()) Die("Specified length too large");
+
+    if (length > q.size())
+      throw std::invalid_argument("Length is too large");
+
     std::vector<uint8_t> result;
     for (size_t i = 0; i < length; i++) {
       result.push_back(q.front());
@@ -37,6 +54,12 @@ class Host {
   }
 
   const MacAddr mac() { return mac_; }
+  const IpAddr ip() { return ip_; }
+
+  void Print() {
+    printf("(ip: %s, mac: %s)\n", ip_.ToString().c_str(),
+      mac_.ToString().c_str());
+  }
 
  private:
   IpAddr ip_;
@@ -51,8 +74,18 @@ class SimulatedNetwork {
   Host *HostForMac(MacAddr mac) {
     for (auto& h : hosts_)
       if (h->mac() == mac) return h.get();
-    Die("Couldn't find host");
+    throw std::invalid_argument(absl::StrFormat("No host for MAC %s",
+      mac.ToString()));
   }
+
+  void AddHostWithMac(MacAddr mac) {
+    auto h = std::make_unique<Host>(RandomIp(), mac);
+    hosts_.push_back(std::move(h));
+  }
+
+  std::vector<std::unique_ptr<Host>>& AllHosts() { return hosts_; }
+
+  void PrintHosts() { for (auto& h : hosts_) h->Print(); }
 
  private:
   std::vector<std::unique_ptr<Host>> hosts_;
@@ -60,7 +93,8 @@ class SimulatedNetwork {
 
 class FakeSocket : public Socket {
  public:
-  explicit FakeSocket(SimulatedNetwork *network) : network_(network) {}
+  explicit FakeSocket(SimulatedNetwork *network,
+    MacAddr mac, IpAddr ip) : network_(network), host_mac_(mac), host_ip_(ip) {}
 
   ssize_t Send(void *buffer, size_t length);
   ssize_t Recv(void *buffer, size_t length);

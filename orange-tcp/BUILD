@@ -67,6 +67,7 @@ cc_test(
   name = "arp_test",
   srcs = ["arp_test.cc"],
   deps = [
+    ":arp",
     ":network_sim",
     ":gtest",
   ]

@@ -10,6 +10,8 @@
 
 #include "netint.h"
 
+#include "absl/strings/str_format.h"
+
 namespace orange_tcp {
 
 constexpr int kMacAddrLen = 6;
@@ -17,11 +19,17 @@ constexpr int kIpAddrLen = 4;
 
 struct MacAddr {
   uint8_t addr[kMacAddrLen];
+
   bool operator==(const MacAddr& other) const {
     return (memcmp(addr, other.addr, kMacAddrLen) == 0);
   }
   bool operator<(const MacAddr& other) const {
     return (memcmp(addr, other.addr, kMacAddrLen) < 0);
+  }
+
+  std::string ToString() {
+    return absl::StrFormat("%x:%x:%x:%x:%x:%x",
+      addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
   }
 };
 
@@ -30,6 +38,11 @@ struct IpAddr {
 
   bool operator==(const IpAddr& other) {
     return (memcmp(addr, other.addr, kIpAddrLen) == 0);
+  }
+
+  std::string ToString() {
+    return absl::StrFormat("%x:%x:%x:%x",
+      addr[0], addr[1], addr[2], addr[3]);
   }
 };
 
@@ -65,10 +78,5 @@ inline void DumpHex(uint8_t *buffer, size_t size) {
   printf("\n");
 }
 
-inline void Die(std::string message) {
-  puts(message.c_str());
-  fflush(stdout);
-  abort();
-}
 
 }  // namespace orange_tcp
