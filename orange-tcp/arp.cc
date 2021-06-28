@@ -10,8 +10,7 @@
 namespace orange_tcp {
 namespace arp {
 
-absl::Status Request(Socket *socket,
-                     const IpAddr &ip, const MacAddr &mac) {
+absl::Status Request(Socket *socket) {
   auto mac_result = socket->GetHostMacAddress();
   if (!mac_result.ok())
     return absl::InternalError("Failed to get source MAC address");
@@ -33,6 +32,23 @@ absl::Status Request(Socket *socket,
     return absl::InternalError(absl::StrFormat("Send failed ('%s')",
       strerror(errno)));
   }
+
+  return absl::OkStatus();
+}
+
+// TODO(jmecom) Implement... figure out how raw sockets work w/ broadcasting.
+// Plan: get ARP working for real before trying to unit test, so I don't implement it
+// incorrectly.
+absl::Status MaybeHandleResponse(Socket *socket) {
+  std::vector<uint8_t> data;
+  data.reserve(kEthernetMtu);
+
+  ssize_t size = socket->Recv(data.data(), data.size());
+  if (size == -1) {
+    return absl::InternalError("No data");
+  }
+
+  DumpHex(data.data(), size);
 
   return absl::OkStatus();
 }

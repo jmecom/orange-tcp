@@ -37,7 +37,11 @@ TEST_F(ArpTest, RequestResponse) {
   auto sock2 = std::make_unique<FakeSocket>(network_.get(), mac2, ip2);
 
   // TODO(jmecom) left off here. Need to actually test.
-  EXPECT_EQ(arp::Request(sock1.get(), ip2, mac2), absl::OkStatus());
+  // Broadcast out the ARP request.
+  EXPECT_EQ(arp::Request(sock1.get()), absl::OkStatus());
+
+  // Receive the request on the intended host.
+  EXPECT_EQ(arp::MaybeHandleResponse(sock2.get()), absl::OkStatus());
 }
 
 }  // namespace arp

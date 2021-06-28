@@ -32,6 +32,7 @@ class Socket {
 class PosixSocket : public Socket {
  public:
   static absl::StatusOr<std::unique_ptr<Socket>> Create();
+  static std::unique_ptr<Socket> CreateOrDie();
 
   // Prefer factory function Create() instead of using constructor.
   explicit PosixSocket(int fd) : fd_(fd) {}

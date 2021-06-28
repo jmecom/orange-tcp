@@ -33,9 +33,8 @@ struct Packet {
   IpAddr dst_ip_addr;
 } __attribute__((packed));
 
-absl::Status Request(Socket *socket,
-                     const IpAddr &ip, const MacAddr &mac);
-absl::Status Response();
+absl::Status Request(Socket *socket);
+absl::Status MaybeHandleResponse(Socket *socket);
 
 class Cache {
  private:

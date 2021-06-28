@@ -27,6 +27,15 @@ absl::StatusOr<std::unique_ptr<Socket>> PosixSocket::Create() {
   return std::make_unique<PosixSocket>(fd);
 }
 
+std::unique_ptr<Socket> PosixSocket::CreateOrDie() {
+  auto socket_result = PosixSocket::Create();
+  if (!socket_result.ok()) {
+    fprintf(stderr, "Failed to create socket\n");
+    exit(1);
+  }
+  return std::move(socket_result.value());
+}
+
 ssize_t PosixSocket::Send(void *buffer, size_t length) {
   return send(fd_, buffer, length, 0);
 }
@@ -114,6 +123,10 @@ absl::StatusOr<struct sockaddr_ll> PosixSocket::MakeSockAddr(MacAddr dst) {
     return absl::InternalError("Failed to fill sockaddr");
   }
   ll.sll_ifindex = idx_result.value();
+
+  // TODO(jmecom)
+  // https://man7.org/linux/man-pages/man7/packet.7.html
+  // PACKET_BROADCAST?
 
   ll.sll_halen = kMacAddrLen;
   memcpy(ll.sll_addr, dst.addr, kMacAddrLen);

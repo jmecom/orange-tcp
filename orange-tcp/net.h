@@ -56,13 +56,13 @@ const IpAddr kBroadcastIp = {
 
 const uint16_net kEtherTypeArp = uint16_net(0x0806);
 const uint16_net kEtherTypeIp = uint16_net(0x0800);
-constexpr int kEthernetMaxMtu = 1500;
+constexpr int kEthernetMtu = 1500;
 
 struct EthernetFrame {
   MacAddr dst_mac;
   MacAddr src_mac;
   uint16_net ether_type;
-  uint8_t data[kEthernetMaxMtu];
+  uint8_t data[kEthernetMtu];
   // TODO(jmecom) Checksum?
 } __attribute__((packed));
 
