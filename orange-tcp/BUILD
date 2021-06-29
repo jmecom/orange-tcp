@@ -34,11 +34,23 @@ cc_library(
 )
 
 cc_library(
+  name = "eth",
+  hdrs = ["eth.h"],
+  srcs = ["eth.cc"],
+  deps = [
+    ":net",
+    ":socket",
+    ":absl",
+  ]
+)
+
+cc_library(
   name = "arp",
   srcs = ["arp.cc"],
   hdrs = ["arp.h"],
   deps = [
     ":socket",
+    ":eth",
     ":net",
     ":absl",
   ],

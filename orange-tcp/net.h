@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 #include <string>
@@ -54,18 +55,6 @@ const IpAddr kBroadcastIp = {
   .addr = {0xFF, 0xFF, 0xFF, 0xFF}
 };
 
-const uint16_net kEtherTypeArp = uint16_net(0x0806);
-const uint16_net kEtherTypeIp = uint16_net(0x0800);
-constexpr int kEthernetMtu = 1500;
-
-struct EthernetFrame {
-  MacAddr dst_mac;
-  MacAddr src_mac;
-  uint16_net ether_type;
-  uint8_t data[kEthernetMtu];
-  // TODO(jmecom) Checksum?
-} __attribute__((packed));
-
 struct Address {
   Address(IpAddr addr, int port) :
     addr(addr), port(port) {}
@@ -74,9 +63,10 @@ struct Address {
 };
 
 inline void DumpHex(uint8_t *buffer, size_t size) {
-  for (size_t i = 0; i < size; i++) printf("%02x", buffer[i]);
+  for (size_t i = 0; i < size; i++) {
+    printf("%02x", buffer[i]);
+  }
   printf("\n");
 }
-
 
 }  // namespace orange_tcp

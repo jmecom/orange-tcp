@@ -15,12 +15,14 @@ namespace arping {
 
 int Server() {
   auto socket = PosixSocket::CreateOrDie();
-  uint8_t data[kEthernetMtu] = {0};
-  ssize_t received;
   for (;;) {
-    received = socket->Recv(data, sizeof(data));
-    printf("Got %ld bytes: ", received);
-    DumpHex(data, received);
+    auto status = arp::MaybeHandleResponse(socket.get());
+    if (!status.ok()) {
+      puts(absl::StrFormat("Err: %s", status.message()).c_str());
+    }
+    // received = socket->Recv(data, sizeof(data));
+    // printf("Got %ld bytes:\n", received);
+    // DumpHex(data, received);
     printf("\n");
     sleep(1);
   }

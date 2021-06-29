@@ -1,5 +1,6 @@
 #include "arp.h"
 #include "net.h"
+#include "eth.h"
 
 #include <arpa/inet.h>
 #include <memory>
@@ -24,31 +25,22 @@ absl::Status Request(Socket *socket) {
     kMacAddrLen, kIpAddrLen, kArpRequest, src_mac, ip_result.value(),
     kBroadcastMac, kBroadcastIp);
 
-  EthernetFrame frame = EthernetFrame(kBroadcastMac, src_mac, kEtherTypeArp);
-  memcpy(frame.data, &arp_request, sizeof(arp_request));
-
-  if (socket->SendTo(static_cast<void *>(&frame),
-                     sizeof(frame), kBroadcastMac) == -1) {
-    return absl::InternalError(absl::StrFormat("Send failed ('%s')",
-      strerror(errno)));
-  }
-
-  return absl::OkStatus();
+  return SendEthernetFrame(socket, src_mac, kBroadcastMac,
+    reinterpret_cast<void *>(&arp_request),
+    sizeof(arp_request), kEtherTypeArp);
 }
 
-// TODO(jmecom) Implement... figure out how raw sockets work w/ broadcasting.
-// Plan: get ARP working for real before trying to unit test, so I don't implement it
-// incorrectly.
 absl::Status MaybeHandleResponse(Socket *socket) {
-  std::vector<uint8_t> data;
-  data.reserve(kEthernetMtu);
+  uint8_t data[kEthernetMtu] = {0};
 
-  ssize_t size = socket->Recv(data.data(), data.size());
+  ssize_t size = socket->Recv(data, sizeof(data));
   if (size == -1) {
     return absl::InternalError("No data");
   }
 
-  DumpHex(data.data(), size);
+  // EthernetFrame *frame = reinterpret_cast<EthernetFrame *>(data);
+  // DumpEthernetFrame(frame);
+  // Packet *arp_request = reinterpret_cast<Packet *>(frame->data);
 
   return absl::OkStatus();
 }
