@@ -31,16 +31,14 @@ absl::Status Request(Socket *socket) {
 }
 
 absl::Status MaybeHandleResponse(Socket *socket) {
-  uint8_t data[kEthernetMtu] = {0};
-
-  ssize_t size = socket->Recv(data, sizeof(data));
-  if (size == -1) {
-    return absl::InternalError("No data");
+  std::vector<uint8_t> payload;
+  auto status = RecvEthernetFrame(socket, &payload);
+  if (!status.ok()) {
+    return status;
   }
 
-  // EthernetFrame *frame = reinterpret_cast<EthernetFrame *>(data);
-  // DumpEthernetFrame(frame);
-  // Packet *arp_request = reinterpret_cast<Packet *>(frame->data);
+  Packet *arp_request = reinterpret_cast<Packet *>(&payload[0]);
+  printf("arp recv %s\n", arp_request->src_hw_addr.ToString().c_str());
 
   return absl::OkStatus();
 }

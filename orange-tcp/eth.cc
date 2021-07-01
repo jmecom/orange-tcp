@@ -1,30 +1,102 @@
 #include "eth.h"
+
+#include <algorithm>
+
 #include "absl/strings/str_format.h"
+#include "absl/flags/flag.h"
+
+ABSL_FLAG(bool, dump_ethernet, false, "Set to log ethernet traffic.");
 
 namespace orange_tcp {
+
+// https://stackoverflow.com/questions/21001659/crc32-algorithm-implementation-in-c-without-a-look-up-table-and-with-a-public-li
+uint32_t crc32(uint8_t *message, int length) {
+  uint32_t byte, crc, mask;
+
+  crc = 0xFFFFFFFF;
+  for (int i = 0; i < length; i++) {
+    byte = message[i];  // Get next byte.
+    crc = crc ^ byte;
+    for (int j = 7; j >= 0; j--) {  // Do eight times.
+      mask = -(crc & 1);
+      crc = (crc >> 1) ^ (0xEDB88320 & mask);
+    }
+  }
+  return ~crc;
+}
+
+EthernetFrame *ToEthernetFrame(uint8_t *data, size_t size) {
+  EthernetFrame *frame = reinterpret_cast<EthernetFrame *>(data);
+  frame->payload = data + sizeof(EthernetHeader);
+  frame->crc = *(reinterpret_cast<uint32_t *>(data + size - kCrcSize));
+  return frame;
+}
 
 absl::Status SendEthernetFrame(Socket *socket,
   const MacAddr &src, const MacAddr &dst,
   void *payload, size_t payload_size,
   uint16_net ether_type) {
-  if (payload_size > kEthernetMtu) {
+  if (payload_size > kEthernetMax) {
     return absl::InvalidArgumentError(
       absl::StrFormat("Size too big: %d > 1500", payload_size));
   }
 
   EthernetHeader header = EthernetHeader(dst, src, ether_type);
+  size_t real_payload_size = std::min<size_t>(kEthernetMin, payload_size);
+
+  // header + payload + frame check sequence
+  size_t frame_size = sizeof(header) + real_payload_size + kCrcSize;
 
   std::vector<uint8_t> frame;
-  frame.resize(sizeof(header) + payload_size);
+  frame.resize(frame_size);
+  memset(&frame[0], 0, frame.size());
   memcpy(&frame[0], &header, sizeof(header));
   memcpy(&frame[sizeof(header)], payload, payload_size);
 
-  DumpHex(frame.data(), frame.size());
+  DumpHex(frame.data(), frame.size() - kCrcSize);
+  uint32_t crc = crc32(frame.data(), frame.size() - kCrcSize);
+  memcpy(&frame[sizeof(header) + real_payload_size], &crc, kCrcSize);
+
+  if (absl::GetFlag(FLAGS_dump_ethernet)) {
+    DumpEthernetFrame(ToEthernetFrame(frame.data(), frame.size()),
+      frame.size());
+  }
+
+  // DumpHex(frame.data(), frame.size());
   if (socket->SendTo(static_cast<void *>(frame.data()),
                      frame.size(), dst) == -1) {
     return absl::InternalError(absl::StrFormat("Send failed ('%s')",
       strerror(errno)));
   }
+
+  return absl::OkStatus();
+}
+
+absl::Status RecvEthernetFrame(Socket *socket,
+  std::vector<uint8_t> *payload) {
+  uint8_t data[kEthernetMax + kEthernetOverhead] = {0};
+
+  ssize_t size = socket->Recv(data, sizeof(data));
+  if (size == -1) {
+    return absl::InternalError("No data");
+  }
+
+  // DumpHex(data, size);
+
+  EthernetFrame *frame = ToEthernetFrame(data, size);
+  if (absl::GetFlag(FLAGS_dump_ethernet)) {
+    DumpEthernetFrame(frame, size);
+  }
+
+  DumpHex(data, size - kCrcSize);
+  uint32_t crc = crc32(data, size - kCrcSize);
+  if (crc != frame->crc) {
+    return absl::InternalError(
+      absl::StrFormat("CRC mismatch: 0x%04x vs 0x%04x", crc, frame->crc));
+  }
+
+  payload->resize(size - kEthernetOverhead);
+  memcpy(&((*payload)[0]), frame->payload, payload->size());
 
   return absl::OkStatus();
 }

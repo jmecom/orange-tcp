@@ -20,9 +20,6 @@ int Server() {
     if (!status.ok()) {
       puts(absl::StrFormat("Err: %s", status.message()).c_str());
     }
-    // received = socket->Recv(data, sizeof(data));
-    // printf("Got %ld bytes:\n", received);
-    // DumpHex(data, received);
     printf("\n");
     sleep(1);
   }

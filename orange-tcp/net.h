@@ -29,7 +29,7 @@ struct MacAddr {
   }
 
   std::string ToString() const {
-    return absl::StrFormat("%x:%x:%x:%x:%x:%x",
+    return absl::StrFormat("%02x:%02x:%02x:%02x:%02x:%02x",
       addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
   }
 };
@@ -42,7 +42,7 @@ struct IpAddr {
   }
 
   std::string ToString() const {
-    return absl::StrFormat("%x:%x:%x:%x",
+    return absl::StrFormat("%02x:%02x:%02x:%02x",
       addr[0], addr[1], addr[2], addr[3]);
   }
 };
