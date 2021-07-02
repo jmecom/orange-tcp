@@ -25,13 +25,6 @@ uint32_t crc32(uint8_t *message, int length) {
   return ~crc;
 }
 
-EthernetFrame *ToEthernetFrame(uint8_t *data, size_t size) {
-  EthernetFrame *frame = reinterpret_cast<EthernetFrame *>(data);
-  frame->payload = data + sizeof(EthernetHeader);
-  frame->crc = *(reinterpret_cast<uint32_t *>(data + size - kCrcSize));
-  return frame;
-}
-
 absl::Status SendEthernetFrame(Socket *socket,
   const MacAddr &src, const MacAddr &dst,
   void *payload, size_t payload_size,
@@ -53,16 +46,13 @@ absl::Status SendEthernetFrame(Socket *socket,
   memcpy(&frame[0], &header, sizeof(header));
   memcpy(&frame[sizeof(header)], payload, payload_size);
 
-  DumpHex(frame.data(), frame.size() - kCrcSize);
   uint32_t crc = crc32(frame.data(), frame.size() - kCrcSize);
-  memcpy(&frame[sizeof(header) + real_payload_size], &crc, kCrcSize);
+  memcpy(&frame[frame.size() - kCrcSize], &crc, kCrcSize);
 
   if (absl::GetFlag(FLAGS_dump_ethernet)) {
-    DumpEthernetFrame(ToEthernetFrame(frame.data(), frame.size()),
-      frame.size());
+    DumpEthernetFrame(frame.data(), frame.size());
   }
 
-  // DumpHex(frame.data(), frame.size());
   if (socket->SendTo(static_cast<void *>(frame.data()),
                      frame.size(), dst) == -1) {
     return absl::InternalError(absl::StrFormat("Send failed ('%s')",
@@ -81,22 +71,21 @@ absl::Status RecvEthernetFrame(Socket *socket,
     return absl::InternalError("No data");
   }
 
-  // DumpHex(data, size);
-
-  EthernetFrame *frame = ToEthernetFrame(data, size);
   if (absl::GetFlag(FLAGS_dump_ethernet)) {
-    DumpEthernetFrame(frame, size);
+    DumpEthernetFrame(data, size);
   }
 
-  DumpHex(data, size - kCrcSize);
+  uint32_t expected_crc =
+    *(reinterpret_cast<uint32_t *>(data + size - kCrcSize));
   uint32_t crc = crc32(data, size - kCrcSize);
-  if (crc != frame->crc) {
+  if (crc != expected_crc) {
     return absl::InternalError(
-      absl::StrFormat("CRC mismatch: 0x%04x vs 0x%04x", crc, frame->crc));
+      absl::StrFormat("CRC mismatch: 0x%04x vs 0x%04x", crc, expected_crc));
   }
 
+  uint8_t *sent_payload = data + sizeof(EthernetHeader);
   payload->resize(size - kEthernetOverhead);
-  memcpy(&((*payload)[0]), frame->payload, payload->size());
+  memcpy(&((*payload)[0]), sent_payload, payload->size());
 
   return absl::OkStatus();
 }

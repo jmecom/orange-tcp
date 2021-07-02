@@ -32,8 +32,6 @@ constexpr int kCrcSize = 4;
 
 constexpr int kEthernetOverhead = sizeof(EthernetHeader) + kCrcSize;
 
-EthernetFrame *ToEthernetFrame(uint8_t *data, size_t size);
-
 absl::Status SendEthernetFrame(Socket *socket,
   const MacAddr &src, const MacAddr &dst,
   void *payload, size_t payload_size,
@@ -42,13 +40,18 @@ absl::Status SendEthernetFrame(Socket *socket,
 absl::Status RecvEthernetFrame(Socket *socket,
   std::vector<uint8_t> *payload);
 
-inline void DumpEthernetFrame(EthernetFrame *frame, size_t size) {
+inline void DumpEthernetFrame(uint8_t *frame, size_t size) {
+  EthernetHeader *hdr = reinterpret_cast<EthernetHeader *>(frame);
+  uint8_t *payload = frame + sizeof(EthernetHeader);
+  uint32_t crc = *(reinterpret_cast<uint32_t *>(frame + size - kCrcSize));
+
   printf("eth: %s -> %s (%x) (crc: 0x%x)  ",
-    frame->hdr.dst_mac.ToString().c_str(),
-    frame->hdr.src_mac.ToString().c_str(),
-    uint16_t(frame->hdr.ether_type),
-    frame->crc);
-  DumpHex(frame->payload, size - kEthernetOverhead);
+    hdr->dst_mac.ToString().c_str(),
+    hdr->src_mac.ToString().c_str(),
+    uint16_t(hdr->ether_type),
+    crc);
+
+  DumpHex(payload, size - kEthernetOverhead);
 }
 
 }  // namespace orange_tcp
