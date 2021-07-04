@@ -108,7 +108,9 @@ absl::StatusOr<IpAddr> PosixSocket::GetHostIpAddress() {
     return absl::InternalError(strerror(errno));
   }
 
-  memcpy(host_ip_.addr, ifr.ifr_addr.sa_data, kIpAddrLen);
+  auto *s = reinterpret_cast<struct sockaddr_in *>(&ifr.ifr_addr);
+  host_ip_.addr = s->sin_addr.s_addr;
+
   cached = true;
 
   return host_ip_;

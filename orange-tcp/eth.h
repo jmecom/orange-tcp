@@ -45,9 +45,9 @@ inline void DumpEthernetFrame(uint8_t *frame, size_t size) {
   uint8_t *payload = frame + sizeof(EthernetHeader);
   uint32_t crc = *(reinterpret_cast<uint32_t *>(frame + size - kCrcSize));
 
-  printf("eth: %s -> %s (%x) (crc: 0x%x)  ",
-    hdr->dst_mac.ToString().c_str(),
+  printf("[eth] %s -> %s (%x) (crc: 0x%x)  ",
     hdr->src_mac.ToString().c_str(),
+    hdr->dst_mac.ToString().c_str(),
     uint16_t(hdr->ether_type),
     crc);
 

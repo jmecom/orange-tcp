@@ -35,15 +35,20 @@ struct MacAddr {
 };
 
 struct IpAddr {
-  uint8_t addr[kIpAddrLen];
+  uint32_t addr;
 
   bool operator==(const IpAddr& other) const {
-    return (memcmp(addr, other.addr, kIpAddrLen) == 0);
+    return addr == other.addr;
   }
 
   std::string ToString() const {
-    return absl::StrFormat("%02x:%02x:%02x:%02x",
-      addr[0], addr[1], addr[2], addr[3]);
+    return std::string(inet_ntoa(static_cast<in_addr>(addr)));
+  }
+
+  static IpAddr FromString(std::string ip) {
+    IpAddr addr;
+    addr.addr = inet_addr(ip.c_str());
+    return addr;
   }
 };
 
@@ -52,7 +57,7 @@ const MacAddr kBroadcastMac = {
 };
 
 const IpAddr kBroadcastIp = {
-  .addr = {0xFF, 0xFF, 0xFF, 0xFF}
+  .addr = 0xFFFFFFFF,
 };
 
 struct Address {

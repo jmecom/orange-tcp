@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <map>
 #include <vector>
+#include <string>
 
 #include "absl/status/status.h"
 
@@ -31,10 +32,31 @@ struct Packet {
   IpAddr src_ip_addr;
   MacAddr dst_hw_addr;
   IpAddr dst_ip_addr;
+
+  std::string ToString() const {
+    // clang-format off
+    return absl::StrFormat(
+      "arp_packet:\n"
+      "  hw_type: %d\n"
+      "  p_type: %d\n"
+      "  hw_addr_len: %d\n"
+      "  p_len: %d\n"
+      "  opcode: %d\n"
+      "  src_hw_addr: %s\n"
+      "  src_ip_addr: %s\n"
+      "  dst_hw_addr: %s\n"
+      "  dst_ip_addr: %s",
+      hw_type, p_type, hw_addr_len, p_len,
+      opcode, src_hw_addr.ToString(),
+      src_ip_addr.ToString(), dst_hw_addr.ToString(),
+      dst_ip_addr.ToString());
+    // clang-format on
+  }
 } __attribute__((packed));
 
-absl::Status Request(Socket *socket);
-absl::Status MaybeHandleResponse(Socket *socket);
+absl::Status Request(Socket *socket, const IpAddr& dst_ip);
+absl::Status HandleRequest(Socket *socket);
+absl::StatusOr<MacAddr> HandleResponse(Socket *socket);
 
 class Cache {
  private:

@@ -35,10 +35,11 @@ absl::Status SendEthernetFrame(Socket *socket,
   }
 
   EthernetHeader header = EthernetHeader(dst, src, ether_type);
-  size_t real_payload_size = std::min<size_t>(kEthernetMin, payload_size);
+  size_t padded_payload_size = payload_size < kEthernetMin ?
+    kEthernetMin : payload_size;
 
   // header + payload + frame check sequence
-  size_t frame_size = sizeof(header) + real_payload_size + kCrcSize;
+  size_t frame_size = sizeof(header) + padded_payload_size + kCrcSize;
 
   std::vector<uint8_t> frame;
   frame.resize(frame_size);
@@ -47,6 +48,10 @@ absl::Status SendEthernetFrame(Socket *socket,
   memcpy(&frame[sizeof(header)], payload, payload_size);
 
   uint32_t crc = crc32(frame.data(), frame.size() - kCrcSize);
+
+  printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!CRC!!\n");
+  DumpHex(frame.data(), frame.size() - kCrcSize);
+
   memcpy(&frame[frame.size() - kCrcSize], &crc, kCrcSize);
 
   if (absl::GetFlag(FLAGS_dump_ethernet)) {

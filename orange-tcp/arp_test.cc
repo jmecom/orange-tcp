@@ -41,7 +41,7 @@ TEST_F(ArpTest, RequestResponse) {
   EXPECT_EQ(arp::Request(sock1.get()), absl::OkStatus());
 
   // Receive the request on the intended host.
-  EXPECT_EQ(arp::MaybeHandleResponse(sock2.get()), absl::OkStatus());
+  EXPECT_EQ(arp::HandleRequest(sock2.get()), absl::OkStatus());
 }
 
 }  // namespace arp
