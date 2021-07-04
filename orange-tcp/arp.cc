@@ -46,12 +46,12 @@ absl::Status HandleRequest(Socket *socket) {
     return status;
   }
 
-  Packet *arp_packet = reinterpret_cast<Packet *>(&payload[0]);
+  Packet *arp_request = reinterpret_cast<Packet *>(&payload[0]);
 
   // Is the request valid?
-  if (arp_packet->opcode != kArpRequest) {
+  if (arp_request->opcode != kArpRequest) {
     return absl::InternalError(absl::StrFormat("%d is not an ARP repuest?",
-      uint16_t(arp_packet->opcode)));
+      uint16_t(arp_request->opcode)));
   }
 
   // Is the request for this host?
@@ -61,17 +61,17 @@ absl::Status HandleRequest(Socket *socket) {
   }
   auto ip = ip_result.value();
 
-  if (arp_packet->dst_ip_addr != ip) {
+  if (arp_request->dst_ip_addr != ip) {
     if (log) {
       printf("[arp] Ignoring request: got %s but host is %s\n",
-      arp_packet->dst_ip_addr.ToString().c_str(),
+      arp_request->dst_ip_addr.ToString().c_str(),
       ip.ToString().c_str());
     }
     return absl::OkStatus();
   }
 
   if (log) {
-    printf("[arp] Handling request %s\n", arp_packet->ToString().c_str());
+    printf("[arp] Handling request %s\n", arp_request->ToString().c_str());
   }
 
   // Get own MAC address
@@ -80,16 +80,18 @@ absl::Status HandleRequest(Socket *socket) {
     return absl::InternalError("Failed to get MAC address");
   auto mac = mac_result.value();
 
-  // Transform request into reply
-  memcpy(arp_packet->dst_hw_addr.addr, mac.addr, kMacAddrLen);
-  arp_packet->opcode = kArpResponse;
+  // Build response
+  Packet arp_response = Packet(kEthernetHwType, kIpProtocolType,
+    kMacAddrLen, kIpAddrLen, kArpResponse, mac, arp_request->dst_ip_addr,
+    arp_request->src_hw_addr, arp_request->src_ip_addr);
 
   if (log) {
-    printf("[arp] Sending response %s\n", arp_packet->ToString().c_str());
+    printf("[arp] Sending response %s\n", arp_response.ToString().c_str());
   }
 
-  return SendEthernetFrame(socket, mac, arp_packet->src_hw_addr,
-    arp_packet, sizeof(*arp_packet), kEtherTypeArp);
+  // return absl::OkStatus();
+  return SendEthernetFrame(socket, mac, arp_response.dst_hw_addr,
+    &arp_response, sizeof(arp_response), kEtherTypeArp);
 }
 
 absl::StatusOr<MacAddr> HandleResponse(Socket *socket) {
