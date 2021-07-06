@@ -19,11 +19,15 @@ class Socket {
  public:
   virtual ~Socket() = default;
 
+  // Wrappers around send/recv
   virtual ssize_t Send(void *buffer, size_t length) = 0;
   virtual ssize_t Recv(void *buffer, size_t length) = 0;
-
   virtual ssize_t SendTo(void *buffer, size_t length, MacAddr dst) = 0;
   virtual ssize_t RecvFrom(void *buffer, size_t length, MacAddr src) = 0;
+
+  // Blocking calls which guarantees all `length` bytes are sent/received.
+  // virtual ssize_t SendAll(void *buffer, size_t length) = 0;
+  virtual ssize_t RecvAll(void *buffer, size_t length) = 0;
 
   virtual absl::StatusOr<MacAddr> GetHostMacAddress() = 0;
   virtual absl::StatusOr<IpAddr> GetHostIpAddress() = 0;
@@ -39,9 +43,10 @@ class PosixSocket : public Socket {
 
   ssize_t Send(void *buffer, size_t length);
   ssize_t Recv(void *buffer, size_t length);
-
   ssize_t SendTo(void *buffer, size_t length, MacAddr dst);
   ssize_t RecvFrom(void *buffer, size_t length, MacAddr src);
+  // ssize_t SendAll(void *buffer, size_t length);
+  ssize_t RecvAll(void *buffer, size_t length);
 
   absl::StatusOr<MacAddr> GetHostMacAddress();
   absl::StatusOr<IpAddr> GetHostIpAddress();

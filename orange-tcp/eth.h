@@ -24,13 +24,11 @@ struct EthernetFrame {
   uint32_t crc;
 };
 
-// Max and min payload sizes.
-constexpr int kEthernetMax = 1500;
-constexpr int kEthernetMin = 46;
-
+constexpr int kEthernetPayloadMax = 1500;
+constexpr int kEthernetPayloadMin = 46;
 constexpr int kCrcSize = 4;
-
 constexpr int kEthernetOverhead = sizeof(EthernetHeader) + kCrcSize;
+constexpr int kEthernetMinFrameSize = kEthernetPayloadMin + kEthernetOverhead;
 
 absl::Status SendEthernetFrame(Socket *socket,
   const MacAddr &src, const MacAddr &dst,
@@ -38,7 +36,7 @@ absl::Status SendEthernetFrame(Socket *socket,
   uint16_net ether_type = kEtherTypeIp);
 
 absl::Status RecvEthernetFrame(Socket *socket,
-  std::vector<uint8_t> *payload);
+  std::vector<uint8_t> *payload, size_t payload_size);
 
 inline void DumpEthernetFrame(uint8_t *frame, size_t size) {
   EthernetHeader *hdr = reinterpret_cast<EthernetHeader *>(frame);

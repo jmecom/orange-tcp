@@ -29,14 +29,14 @@ absl::Status SendEthernetFrame(Socket *socket,
   const MacAddr &src, const MacAddr &dst,
   void *payload, size_t payload_size,
   uint16_net ether_type) {
-  if (payload_size > kEthernetMax) {
+  if (payload_size > kEthernetPayloadMax) {
     return absl::InvalidArgumentError(
       absl::StrFormat("Size too big: %d > 1500", payload_size));
   }
 
   EthernetHeader header = EthernetHeader(dst, src, ether_type);
-  size_t padded_payload_size = payload_size < kEthernetMin ?
-    kEthernetMin : payload_size;
+  size_t padded_payload_size = payload_size < kEthernetPayloadMin ?
+    kEthernetPayloadMin : payload_size;
 
   // header + payload + frame check sequence
   size_t frame_size = sizeof(header) + padded_payload_size + kCrcSize;
@@ -49,7 +49,8 @@ absl::Status SendEthernetFrame(Socket *socket,
 
   uint32_t crc = crc32(frame.data(), frame.size() - kCrcSize);
 
-  printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!CRC!!\n");
+  printf("CRC: %04x\n", crc);
+  printf("CRC is over: ");
   DumpHex(frame.data(), frame.size() - kCrcSize);
 
   memcpy(&frame[frame.size() - kCrcSize], &crc, kCrcSize);
@@ -58,8 +59,9 @@ absl::Status SendEthernetFrame(Socket *socket,
     DumpEthernetFrame(frame.data(), frame.size());
   }
 
-  if (socket->SendTo(static_cast<void *>(frame.data()),
-                     frame.size(), dst) == -1) {
+  printf("Full data: (%d) ", frame.size());
+  DumpHex(frame.data(), frame.size());
+  if (socket->SendTo(frame.data(), frame.size(), dst) == -1) {
     return absl::InternalError(absl::StrFormat("Send failed ('%s')",
       strerror(errno)));
   }
@@ -67,15 +69,27 @@ absl::Status SendEthernetFrame(Socket *socket,
   return absl::OkStatus();
 }
 
-absl::Status RecvEthernetFrame(Socket *socket,
-  std::vector<uint8_t> *payload) {
-  uint8_t data[kEthernetMax + kEthernetOverhead] = {0};
+//
+// TODO(jmecom)
+// Issues:
+// 1) Raw socket is receiving its own packet
+//    https://stackoverflow.com/questions/16543191/missing-arp-packets-in-sock-raw-socket
+//    https://stackoverflow.com/questions/55517735/raw-sockets-receiving-messages-sent-by-itself
+// 2) Mismatch between data being sent and received.
+//
 
-  ssize_t size = socket->Recv(data, sizeof(data));
+absl::Status RecvEthernetFrame(Socket *socket,
+  std::vector<uint8_t> *payload, size_t payload_size) {
+  if (payload_size < kEthernetPayloadMin) {
+    payload_size = kEthernetPayloadMin;
+  }
+
+  uint8_t data[payload_size + kEthernetOverhead] = {0};
+
+  ssize_t size = socket->RecvAll(data, sizeof(data));
   if (size == -1) {
     return absl::InternalError("No data");
   }
-
   if (absl::GetFlag(FLAGS_dump_ethernet)) {
     DumpEthernetFrame(data, size);
   }
@@ -83,6 +97,12 @@ absl::Status RecvEthernetFrame(Socket *socket,
   uint32_t expected_crc =
     *(reinterpret_cast<uint32_t *>(data + size - kCrcSize));
   uint32_t crc = crc32(data, size - kCrcSize);
+
+  printf("CRC is over: ");
+  DumpHex(data, size - kCrcSize);
+  printf("Full data: (%d) ", size);
+  DumpHex(data, size);
+
   if (crc != expected_crc) {
     return absl::InternalError(
       absl::StrFormat("CRC mismatch: 0x%04x vs 0x%04x", crc, expected_crc));

@@ -41,7 +41,7 @@ absl::Status HandleRequest(Socket *socket) {
   bool log = absl::GetFlag(FLAGS_dump_arp);
 
   std::vector<uint8_t> payload;
-  auto status = RecvEthernetFrame(socket, &payload);
+  auto status = RecvEthernetFrame(socket, &payload, sizeof(Packet));
   if (!status.ok()) {
     return status;
   }
@@ -86,17 +86,24 @@ absl::Status HandleRequest(Socket *socket) {
     arp_request->src_hw_addr, arp_request->src_ip_addr);
 
   if (log) {
-    printf("[arp] Sending response %s\n", arp_response.ToString().c_str());
+    printf("[arp] Sending response %s\n",
+      arp_response.ToString().c_str());
   }
 
-  // return absl::OkStatus();
-  return SendEthernetFrame(socket, mac, arp_response.dst_hw_addr,
+  // TODO(jmecom) Remove me. For debugging
+
+  MacAddr dst = arp_response.dst_hw_addr;
+  memset(&arp_response, 0xab, sizeof(arp_response));
+  return SendEthernetFrame(socket, mac, dst,
     &arp_response, sizeof(arp_response), kEtherTypeArp);
+
+  // return SendEthernetFrame(socket, mac, arp_response.dst_hw_addr,
+  //   &arp_response, sizeof(arp_response), kEtherTypeArp);
 }
 
 absl::StatusOr<MacAddr> HandleResponse(Socket *socket) {
   std::vector<uint8_t> payload;
-  auto status = RecvEthernetFrame(socket, &payload);
+  auto status = RecvEthernetFrame(socket, &payload, sizeof(Packet));
   if (!status.ok()) {
     return status;
   }
@@ -108,12 +115,11 @@ absl::StatusOr<MacAddr> HandleResponse(Socket *socket) {
   }
 
   MacAddr mac;
-  memcpy(mac.addr, arp_response->dst_hw_addr.addr, kMacAddrLen);
+  memcpy(mac.addr, arp_response->src_hw_addr.addr, kMacAddrLen);
 
   if (absl::GetFlag(FLAGS_dump_arp)) {
-    printf("[arp] Got MAC %s for IP %s\n",
-      mac.ToString().c_str(),
-      arp_response->dst_ip_addr.ToString().c_str());
+    printf("[arp] Got response %s\n",
+      arp_response->ToString().c_str());
   }
 
   return mac;

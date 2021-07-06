@@ -13,10 +13,7 @@
 namespace orange_tcp {
 namespace arp {
 
-// Only IEEE 802.3 Ethernet is supported.
-const uint16_net kEthernetHwType = uint16_net(6);
-
-// Only IP is supported.
+const uint16_net kEthernetHwType = uint16_net(1);
 const uint16_net kIpProtocolType = uint16_net(2048);
 
 const uint16_net kArpRequest = uint16_net(1);
