@@ -11,6 +11,7 @@ namespace orange_tcp {
 absl::StatusOr<std::unique_ptr<Socket>> PosixSocket::Create() {
   // Not using ETH_P_ALL since it also receives outgoing frames.
   int fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_IP | ETH_P_ARP));
+  // int fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   if (fd < 0) {
     return absl::InternalError(
       absl::StrFormat("Failed to create socket: %s",
@@ -63,35 +64,16 @@ ssize_t PosixSocket::RecvFrom(void *buffer, size_t length, MacAddr src) {
     reinterpret_cast<struct sockaddr *>(&ll), &size);
 }
 
-// ssize_t SendAll(void *buffer, size_t length) {
-//   size_t sent = 0, ret = 0;
-//   while (sent < length) {
-//     ret =
-//   }
-// }
 ssize_t PosixSocket::RecvAll(void *buffer, size_t length) {
   uint8_t *off = reinterpret_cast<uint8_t *>(buffer);
   size_t ret = 0, size = length;
-  while (size) {
+  while (size > 0) {
     ret = Recv(off, size);
-    if (ret < 0) return -1;
-    printf("Got %ld\n", ret);
-    DumpHex((uint8_t *)off, ret);
+    if (ret < 0 || ret > size) return -1;
     size -= ret;
     off += ret;
   }
   return length;
-  // size_t received = 0, ret = 0;
-  // while (received < length) {
-  //   ret = Recv(reinterpret_cast<uint8_t *>(buffer) + received,
-  //     length - received);
-  //   if (ret < 0) return -1;
-  //   // if (ret <= 0) return received;
-  //   received += ret;
-  //   printf("Got %ld, %ld\n", ret, received);
-  //   DumpHex((uint8_t *)buffer, ret);
-  // }
-  // return received;
 }
 
 absl::StatusOr<int> PosixSocket::GetInterfaceIndex() {

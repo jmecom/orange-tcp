@@ -23,3 +23,6 @@ First, `docker run ...` to create another container; it will automatically be as
 * `ifconfig` on machine A to check its IP and MAC addresses.
 * `arping -c 2 172.17.0.3 -vv` on machine B
 * `arp -e` on machine B to check arp cache.
+
+Now, to test our own ARP implementation, we'll want to disable the kernel from
+responding to our ARP requests. Can do this with: `ifconfig eth0 -arp`.

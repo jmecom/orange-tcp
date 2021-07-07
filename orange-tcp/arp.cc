@@ -90,15 +90,8 @@ absl::Status HandleRequest(Socket *socket) {
       arp_response.ToString().c_str());
   }
 
-  // TODO(jmecom) Remove me. For debugging
-
-  MacAddr dst = arp_response.dst_hw_addr;
-  memset(&arp_response, 0xab, sizeof(arp_response));
-  return SendEthernetFrame(socket, mac, dst,
+  return SendEthernetFrame(socket, mac, arp_response.dst_hw_addr,
     &arp_response, sizeof(arp_response), kEtherTypeArp);
-
-  // return SendEthernetFrame(socket, mac, arp_response.dst_hw_addr,
-  //   &arp_response, sizeof(arp_response), kEtherTypeArp);
 }
 
 absl::StatusOr<MacAddr> HandleResponse(Socket *socket) {

@@ -18,12 +18,6 @@ struct EthernetHeader {
   uint16_net ether_type;
 } __attribute__((packed));
 
-struct EthernetFrame {
-  EthernetHeader hdr;
-  uint8_t *payload;
-  uint32_t crc;
-};
-
 constexpr int kEthernetPayloadMax = 1500;
 constexpr int kEthernetPayloadMin = 46;
 constexpr int kCrcSize = 4;

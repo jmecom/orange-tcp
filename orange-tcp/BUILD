@@ -87,3 +87,13 @@ cc_test(
     ":gtest",
   ]
 )
+
+cc_binary(
+  name = "eth_echo",
+  srcs = ["eth_echo.cc"],
+  deps = [
+    ":net",
+    ":eth",
+    ":absl",
+  ]
+)
