@@ -32,13 +32,13 @@ class Socket {
   virtual absl::StatusOr<IpAddr> GetHostIpAddress() = 0;
 };
 
-class PosixSocket : public Socket {
+class RawSocket : public Socket {
  public:
   static absl::StatusOr<std::unique_ptr<Socket>> Create();
   static std::unique_ptr<Socket> CreateOrDie();
 
   // Prefer factory function Create() instead of using constructor.
-  explicit PosixSocket(int fd) : fd_(fd) {}
+  explicit RawSocket(int fd) : fd_(fd) {}
 
   ssize_t Send(void *buffer, size_t length);
   ssize_t Recv(void *buffer, size_t length);

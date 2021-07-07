@@ -16,7 +16,7 @@ namespace orange_tcp {
 namespace arping {
 
 int Server() {
-  auto socket = PosixSocket::CreateOrDie();
+  auto socket = RawSocket::CreateOrDie();
   for (;;) {
     auto status = arp::HandleRequest(socket.get());
     if (!status.ok()) {
@@ -35,7 +35,7 @@ int Client() {
     return -1;
   }
 
-  auto socket = PosixSocket::CreateOrDie();
+  auto socket = RawSocket::CreateOrDie();
   auto result = arp::Request(socket.get(), IpAddr::FromString(ip));
   if (!result.ok()) {
     printf("[arping] %s\n", absl::StrFormat("ARP request failed: %s",

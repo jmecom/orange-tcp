@@ -74,28 +74,27 @@ absl::Status RecvEthernetFrame(Socket *socket,
       absl::StrFormat("Size too big: %d > 1500", payload_size));
   }
 
-  // TODO(jmecom) remove this buffer
-  uint8_t data[payload_size + kEthernetOverhead] = {0};
+  uint8_t frame[payload_size + kEthernetOverhead] = {0};
 
-  ssize_t size = socket->RecvAll(data, sizeof(data));
+  ssize_t size = socket->RecvAll(frame, sizeof(frame));
   if (size == -1) {
     return absl::InternalError("No data");
   }
 
   if (absl::GetFlag(FLAGS_dump_ethernet)) {
-    DumpEthernetFrame(data, size);
+    DumpEthernetFrame(frame, size);
   }
 
   uint32_t expected_crc =
-    *(reinterpret_cast<uint32_t *>(data + size - kCrcSize));
-  uint32_t crc = crc32(data, size - kCrcSize);
+    *(reinterpret_cast<uint32_t *>(frame + size - kCrcSize));
+  uint32_t crc = crc32(frame, size - kCrcSize);
 
   if (crc != expected_crc) {
     return absl::InternalError(
       absl::StrFormat("CRC mismatch: 0x%04x vs 0x%04x", crc, expected_crc));
   }
 
-  uint8_t *sent_payload = data + sizeof(EthernetHeader);
+  uint8_t *sent_payload = frame + sizeof(EthernetHeader);
   payload->resize(size - kEthernetOverhead);
   memcpy(&((*payload)[0]), sent_payload, payload->size());
 

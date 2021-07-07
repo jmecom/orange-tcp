@@ -58,7 +58,7 @@ cc_library(
 
 cc_library(
   name = "socket",
-  srcs = ["posix_socket.cc"],
+  srcs = ["raw_socket.cc"],
   hdrs = ["socket.h"],
   deps = [
     ":net",

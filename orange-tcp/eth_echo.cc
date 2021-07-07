@@ -22,7 +22,7 @@ static const MacAddr kClientMac = {
 };
 
 int Server() {
-  auto socket = PosixSocket::CreateOrDie();
+  auto socket = RawSocket::CreateOrDie();
 
   std::vector<uint8_t> payload;
   size_t payload_size = 32;
@@ -46,7 +46,7 @@ int Server() {
 }
 
 int Client() {
-  auto socket = PosixSocket::CreateOrDie();
+  auto socket = RawSocket::CreateOrDie();
 
   constexpr int kPayloadSize = 32;
   uint8_t payload[kPayloadSize];
