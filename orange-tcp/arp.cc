@@ -14,15 +14,25 @@ ABSL_FLAG(bool, dump_arp, false, "Set to log ARP debugging information.");
 namespace orange_tcp {
 namespace arp {
 
-absl::Status Request(Socket *socket, const IpAddr& dst_ip) {
+static std::map<IpAddr, MacAddr> g_arp_cache;
+
+absl::Status Request(Socket *socket, const IpAddr& dst_ip,
+                     MacAddr *mac_addr_out) {
+  if (g_arp_cache.find(dst_ip) != g_arp_cache.end()) {
+    *mac_addr_out = g_arp_cache[dst_ip];
+    return absl::AlreadyExistsError("MAC found");
+  }
+
   auto mac_result = socket->GetHostMacAddress();
-  if (!mac_result.ok())
+  if (!mac_result.ok()) {
     return absl::InternalError("Failed to get source MAC address");
+  }
   auto src_mac = mac_result.value();
 
   auto ip_result = socket->GetHostIpAddress();
-  if (!ip_result.ok())
+  if (!ip_result.ok()) {
     return absl::InternalError("Failed to get source IP address");
+  }
 
   Packet arp_request = Packet(kEthernetHwType, kIpProtocolType,
     kMacAddrLen, kIpAddrLen, kArpRequest, src_mac, ip_result.value(),
@@ -94,7 +104,7 @@ absl::Status HandleRequest(Socket *socket) {
     &arp_response, sizeof(arp_response), kEtherTypeArp);
 }
 
-absl::StatusOr<MacAddr> HandleResponse(Socket *socket) {
+absl::Status HandleResponse(Socket *socket, MacAddr *mac_addr_out) {
   std::vector<uint8_t> payload;
   auto status = RecvEthernetFrame(socket, &payload, sizeof(Packet));
   if (!status.ok()) {
@@ -107,15 +117,16 @@ absl::StatusOr<MacAddr> HandleResponse(Socket *socket) {
       uint16_t(arp_response->opcode)));
   }
 
-  MacAddr mac;
-  memcpy(mac.addr, arp_response->src_hw_addr.addr, kMacAddrLen);
+  memcpy(mac_addr_out->addr, arp_response->src_hw_addr.addr, kMacAddrLen);
 
   if (absl::GetFlag(FLAGS_dump_arp)) {
     printf("[arp] Got response %s\n",
       arp_response->ToString().c_str());
   }
 
-  return mac;
+  g_arp_cache[arp_response->src_ip_addr] = *mac_addr_out;
+
+  return absl::OkStatus();
 }
 
 }  // namespace arp

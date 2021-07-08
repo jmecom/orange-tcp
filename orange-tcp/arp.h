@@ -51,9 +51,10 @@ struct Packet {
   }
 } __attribute__((packed));
 
-absl::Status Request(Socket *socket, const IpAddr& dst_ip);
+absl::Status Request(Socket *socket, const IpAddr& dst_ip,
+                     MacAddr *mac_addr_out);
 absl::Status HandleRequest(Socket *socket);
-absl::StatusOr<MacAddr> HandleResponse(Socket *socket);
+absl::Status HandleResponse(Socket *socket, MacAddr *mac_addr_out);
 
 class Cache {
  private:

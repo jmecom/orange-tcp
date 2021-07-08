@@ -41,6 +41,10 @@ struct IpAddr {
     return addr == other.addr;
   }
 
+  bool operator<(const IpAddr& other) const {
+    return addr < other.addr;
+  }
+
   std::string ToString() const {
     return std::string(inet_ntoa(static_cast<in_addr>(addr)));
   }

@@ -11,7 +11,6 @@ namespace orange_tcp {
 absl::StatusOr<std::unique_ptr<Socket>> RawSocket::Create() {
   // Not using ETH_P_ALL since it also receives outgoing frames.
   int fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_IP | ETH_P_ARP));
-  // int fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   if (fd < 0) {
     return absl::InternalError(
       absl::StrFormat("Failed to create socket: %s",
