@@ -56,10 +56,5 @@ absl::Status Request(Socket *socket, const IpAddr& dst_ip,
 absl::Status HandleRequest(Socket *socket);
 absl::Status HandleResponse(Socket *socket, MacAddr *mac_addr_out);
 
-class Cache {
- private:
-  std::map<IpAddr, MacAddr> cache_;
-};
-
 }  // namespace arp
 }  // namespace orange_tcp

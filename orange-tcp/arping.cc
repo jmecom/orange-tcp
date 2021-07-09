@@ -12,7 +12,7 @@ ABSL_FLAG(bool, server, false, "True -> server, false -> client");
 ABSL_FLAG(std::string, ip, "",
   "Destination IP address (numbers-and-dots notation)");
 ABSL_FLAG(int, num_requests, 1,
-  "How many times to issue the same request.");
+  "How many times to issue the same request");
 
 namespace orange_tcp {
 namespace arping {
