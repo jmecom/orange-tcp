@@ -19,15 +19,6 @@ cc_library(
   ]
 )
 
-cc_binary(
-  name = "arping",
-  srcs = ["arping.cc"],
-  deps = [
-    ":arp",
-    ":absl",
-  ]
-)
-
 cc_library(
   name = "net",
   hdrs = ["net.h", "netint.h"],
@@ -53,6 +44,30 @@ cc_library(
     ":eth",
     ":net",
     ":absl",
+  ],
+)
+
+cc_library(
+  name = "ip",
+  srcs = ["ip.cc"],
+  hdrs = ["ip.h"],
+  deps = [
+    ":net",
+    ":socket",
+    ":eth",
+    ":arp",
+    ":absl",
+  ],
+)
+
+cc_library(
+  name = "icmp",
+  srcs = ["icmp.cc"],
+  hdrs = ["icmp.h"],
+  deps = [
+    ":net",
+    ":absl",
+    ":ip",
   ],
 )
 
@@ -94,6 +109,25 @@ cc_binary(
   deps = [
     ":net",
     ":eth",
+    ":absl",
+  ]
+)
+
+cc_binary(
+  name = "arping",
+  srcs = ["arping.cc"],
+  deps = [
+    ":arp",
+    ":absl",
+  ]
+)
+
+cc_binary(
+  name = "ping",
+  srcs = ["ping.cc"],
+  deps = [
+    ":ip",
+    ":icmp",
     ":absl",
   ]
 )

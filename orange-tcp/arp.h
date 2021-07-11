@@ -9,6 +9,7 @@
 #include <string>
 
 #include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 
 namespace orange_tcp {
 namespace arp {
@@ -50,6 +51,9 @@ struct Packet {
     // clang-format on
   }
 } __attribute__((packed));
+
+// Convenience wrapper around Request + HandleRequest.
+MacAddr GetMacOrDie(Socket *socket, const IpAddr& ip);
 
 absl::Status Request(Socket *socket, const IpAddr& dst_ip,
                      MacAddr *mac_addr_out);

@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <unistd.h>
 #include <memory>
+#include <utility>
 
 #include "absl/status/statusor.h"
 #include "absl/status/status.h"
@@ -30,6 +31,7 @@ class Socket {
 
   virtual absl::StatusOr<MacAddr> GetHostMacAddress() = 0;
   virtual absl::StatusOr<IpAddr> GetHostIpAddress() = 0;
+  virtual std::pair<MacAddr, IpAddr> GetHostMacAndIpOrDie() = 0;
 };
 
 class RawSocket : public Socket {
@@ -48,6 +50,8 @@ class RawSocket : public Socket {
 
   absl::StatusOr<MacAddr> GetHostMacAddress();
   absl::StatusOr<IpAddr> GetHostIpAddress();
+
+  std::pair<MacAddr, IpAddr> GetHostMacAndIpOrDie();
 
  private:
   absl::StatusOr<int> GetInterfaceIndex();

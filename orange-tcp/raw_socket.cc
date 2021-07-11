@@ -128,6 +128,24 @@ absl::StatusOr<IpAddr> RawSocket::GetHostIpAddress() {
   return host_ip_;
 }
 
+std::pair<MacAddr, IpAddr> RawSocket::GetHostMacAndIpOrDie() {
+  auto ip_result = GetHostIpAddress();
+  if (!ip_result.ok()) {
+    fprintf(stderr, "Failed to get source IP address\n");
+    exit(1);
+  }
+  auto ip = ip_result.value();
+
+  auto mac_result = GetHostMacAddress();
+  if (!mac_result.ok()) {
+    fprintf(stderr, "Failed to get source MAC address\n");
+    exit(1);
+  }
+  auto mac = mac_result.value();
+
+  return std::pair<MacAddr, IpAddr>(mac, ip);
+}
+
 absl::StatusOr<struct sockaddr_ll> RawSocket::MakeSockAddr(MacAddr dst) {
   struct sockaddr_ll ll = {0};
   ll.sll_family = AF_PACKET;

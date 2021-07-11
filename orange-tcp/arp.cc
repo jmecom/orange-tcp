@@ -16,6 +16,29 @@ namespace arp {
 
 static std::map<IpAddr, MacAddr> g_arp_cache;
 
+MacAddr GetMacOrDie(Socket *socket, const IpAddr& ip) {
+  MacAddr dst_mac;
+  auto result = Request(socket, ip, &dst_mac);
+  if (absl::IsAlreadyExists(result)) {
+    return dst_mac;
+  }
+
+  if (!result.ok()) {
+    fprintf(stderr, "ARP request failed: %s\n",
+      result.message().data());
+    exit(1);
+  }
+
+  result = HandleResponse(socket, &dst_mac);
+  if (!result.ok()) {
+    fprintf(stderr, "Failed to handle ARP response (%s)\n",
+      result.message().data());
+    exit(1);
+  }
+
+  return dst_mac;
+}
+
 absl::Status Request(Socket *socket, const IpAddr& dst_ip,
                      MacAddr *mac_addr_out) {
   if (g_arp_cache.find(dst_ip) != g_arp_cache.end()) {
