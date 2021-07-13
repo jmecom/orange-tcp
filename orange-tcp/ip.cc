@@ -55,9 +55,10 @@ Datagram MakeDatagram(IpAddr src, IpAddr dst, std::vector<uint8_t> data) {
 
 absl::Status SendDatagram(Socket *socket, IpAddr dst,
                           std::vector<uint8_t> data) {
-  std::pair<MacAddr, IpAddr> p = socket->GetHostMacAndIpOrDie();
-  auto src_mac = p.first;
-  auto src_ip = p.second;
+  auto mac_ip_status = socket->GetHostMacAndIp();
+  std::pair<MacAddr, IpAddr> pair = mac_ip_status.value();
+  auto src_mac = pair.first;
+  auto src_ip = pair.second;
 
   printf("1\n");
 
@@ -65,8 +66,13 @@ absl::Status SendDatagram(Socket *socket, IpAddr dst,
   // 1) This doesn't have a timeout, and it really shouldn't be blocking.
   // 2) Do I need to consult an IP routing table? Of course ARP requests
   //    to e.g. 1.1.1.1 will fail. Should the 'dst' actually be like,
-  //    my local router?
-  MacAddr dst_mac = arp::GetMacOrDie(socket, dst);
+  //    my local router @ 192.168.0.1? Confused.
+  auto mac_status = arp::GetMac(socket, dst);
+  if (!mac_status.ok()) {
+    return absl::InternalError("Failed to get MAC address");
+  }
+  MacAddr dst_mac = mac_status.value();
+
   printf("2\n");
 
   auto datagram = MakeDatagram(src_ip, dst, data);

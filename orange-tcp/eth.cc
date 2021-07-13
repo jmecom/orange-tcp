@@ -65,6 +65,8 @@ absl::Status SendEthernetFrame(Socket *socket,
 
 absl::Status RecvEthernetFrame(Socket *socket,
   std::vector<uint8_t> *payload, size_t payload_size) {
+  bool log = absl::GetFlag(FLAGS_dump_ethernet));
+
   if (payload_size < kEthernetPayloadMin) {
     payload_size = kEthernetPayloadMin;
   }
@@ -76,12 +78,34 @@ absl::Status RecvEthernetFrame(Socket *socket,
 
   uint8_t frame[payload_size + kEthernetOverhead] = {0};
 
-  ssize_t size = socket->RecvAll(frame, sizeof(frame));
-  if (size == -1) {
-    return absl::InternalError("No data");
+  EthernetHeader *hdr;
+  auto mac_result = socket->GetHostMacAddress();
+  if (!mac_result.ok()) {
+    return absl::InternalError("Failed to get host MAC");
+  }
+  MacAddr host_mac = mac_result.value();
+
+  ssize_t size;
+  for (;;) {
+    size = socket->RecvAll(frame, sizeof(frame));
+    if (size == -1) {
+      return absl::InternalError("No data");
+    }
+    hdr = reinterpret_cast<EthernetHeader *>(frame);
+    if (hdr->src_mac != host_mac) {
+      break;
+    }
+    if (log) {
+      printf("[eth] Ignoring frame from own MAC address");
+    }
   }
 
-  if (absl::GetFlag(FLAGS_dump_ethernet)) {
+  // ssize_t size = socket->RecvAll(frame, sizeof(frame));
+  // if (size == -1) {
+  //   return absl::InternalError("No data");
+  // }
+
+  if (log) {
     DumpEthernetFrame(frame, size);
   }
 

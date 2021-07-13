@@ -16,7 +16,7 @@ namespace arp {
 
 static std::map<IpAddr, MacAddr> g_arp_cache;
 
-MacAddr GetMacOrDie(Socket *socket, const IpAddr& ip) {
+absl::StatusOr<MacAddr> GetMac(Socket *socket, const IpAddr& ip) {
   MacAddr dst_mac;
   auto result = Request(socket, ip, &dst_mac);
   if (absl::IsAlreadyExists(result)) {
@@ -24,16 +24,14 @@ MacAddr GetMacOrDie(Socket *socket, const IpAddr& ip) {
   }
 
   if (!result.ok()) {
-    fprintf(stderr, "ARP request failed: %s\n",
-      result.message().data());
-    exit(1);
+    return absl::InternalError(
+      absl::StrFormat("ARP request failed: %s", result.message()));
   }
 
   result = HandleResponse(socket, &dst_mac);
   if (!result.ok()) {
-    fprintf(stderr, "Failed to handle ARP response (%s)\n",
-      result.message().data());
-    exit(1);
+    return absl::InternalError(
+      absl::StrFormat("Failed to handle ARP response: %s", result.message()));
   }
 
   return dst_mac;
@@ -81,6 +79,10 @@ absl::Status HandleRequest(Socket *socket) {
 
   Packet *arp_request = reinterpret_cast<Packet *>(&payload[0]);
 
+  if (log) {
+    printf("[arp] Handling request %s\n", arp_request->ToString().c_str());
+  }
+
   // Is the request valid?
   if (arp_request->opcode != kArpRequest) {
     return absl::InternalError(absl::StrFormat("%d is not an ARP repuest?",
@@ -101,10 +103,6 @@ absl::Status HandleRequest(Socket *socket) {
       ip.ToString().c_str());
     }
     return absl::OkStatus();
-  }
-
-  if (log) {
-    printf("[arp] Handling request %s\n", arp_request->ToString().c_str());
   }
 
   // Get own MAC address
@@ -135,17 +133,18 @@ absl::Status HandleResponse(Socket *socket, MacAddr *mac_addr_out) {
   }
 
   Packet *arp_response = reinterpret_cast<Packet *>(&payload[0]);
+
+  if (absl::GetFlag(FLAGS_dump_arp)) {
+    printf("[arp] Got response %s\n",
+      arp_response->ToString().c_str());
+  }
+
   if (arp_response->opcode != kArpResponse) {
     return absl::InternalError(absl::StrFormat("%d is not an ARP reply?",
       uint16_t(arp_response->opcode)));
   }
 
   memcpy(mac_addr_out->addr, arp_response->src_hw_addr.addr, kMacAddrLen);
-
-  if (absl::GetFlag(FLAGS_dump_arp)) {
-    printf("[arp] Got response %s\n",
-      arp_response->ToString().c_str());
-  }
 
   g_arp_cache[arp_response->src_ip_addr] = *mac_addr_out;
 

@@ -31,7 +31,7 @@ class Socket {
 
   virtual absl::StatusOr<MacAddr> GetHostMacAddress() = 0;
   virtual absl::StatusOr<IpAddr> GetHostIpAddress() = 0;
-  virtual std::pair<MacAddr, IpAddr> GetHostMacAndIpOrDie() = 0;
+  virtual absl::StatusOr<std::pair<MacAddr, IpAddr>> GetHostMacAndIp() = 0;
 };
 
 class RawSocket : public Socket {
@@ -50,8 +50,7 @@ class RawSocket : public Socket {
 
   absl::StatusOr<MacAddr> GetHostMacAddress();
   absl::StatusOr<IpAddr> GetHostIpAddress();
-
-  std::pair<MacAddr, IpAddr> GetHostMacAndIpOrDie();
+  absl::StatusOr<std::pair<MacAddr, IpAddr>> GetHostMacAndIp();
 
  private:
   absl::StatusOr<int> GetInterfaceIndex();
@@ -64,7 +63,7 @@ class RawSocket : public Socket {
   int interface_index_;
 
   // TODO(jmecom) Shouldn't be hardcoded, but good enough for now.
-  const char *kEthDevice = "eth0";
+  const char *kEthDevice = "eth1";
 };
 
 }  // namespace orange_tcp
