@@ -65,7 +65,7 @@ absl::Status SendEthernetFrame(Socket *socket,
 
 absl::Status RecvEthernetFrame(Socket *socket,
   std::vector<uint8_t> *payload, size_t payload_size) {
-  bool log = absl::GetFlag(FLAGS_dump_ethernet));
+  bool log = absl::GetFlag(FLAGS_dump_ethernet);
 
   if (payload_size < kEthernetPayloadMin) {
     payload_size = kEthernetPayloadMin;
@@ -78,6 +78,7 @@ absl::Status RecvEthernetFrame(Socket *socket,
 
   uint8_t frame[payload_size + kEthernetOverhead] = {0};
 
+  // TODO Maybe remove
   EthernetHeader *hdr;
   auto mac_result = socket->GetHostMacAddress();
   if (!mac_result.ok()) {
@@ -87,6 +88,8 @@ absl::Status RecvEthernetFrame(Socket *socket,
 
   ssize_t size;
   for (;;) {
+    printf("Loop\n");
+    memset(frame, 0, sizeof(frame)); // TODO Remove
     size = socket->RecvAll(frame, sizeof(frame));
     if (size == -1) {
       return absl::InternalError("No data");
@@ -96,9 +99,10 @@ absl::Status RecvEthernetFrame(Socket *socket,
       break;
     }
     if (log) {
-      printf("[eth] Ignoring frame from own MAC address");
+      printf("[eth] Ignoring frame from own MAC address\n");
     }
   }
+  // END TODO Maybe remove
 
   // ssize_t size = socket->RecvAll(frame, sizeof(frame));
   // if (size == -1) {
@@ -111,12 +115,14 @@ absl::Status RecvEthernetFrame(Socket *socket,
 
   uint32_t expected_crc =
     *(reinterpret_cast<uint32_t *>(frame + size - kCrcSize));
+  DumpHex(frame, size - kCrcSize);
   uint32_t crc = crc32(frame, size - kCrcSize);
+  printf("Calculated 0x%04x, expected 0x%04x\n", crc, expected_crc);
 
-  if (crc != expected_crc) {
-    return absl::InternalError(
-      absl::StrFormat("CRC mismatch: 0x%04x vs 0x%04x", crc, expected_crc));
-  }
+  // if (crc != expected_crc) {
+  //   return absl::InternalError(
+  //     absl::StrFormat("CRC mismatch: 0x%04x vs 0x%04x", crc, expected_crc));
+  // }
 
   uint8_t *sent_payload = frame + sizeof(EthernetHeader);
   payload->resize(size - kEthernetOverhead);

@@ -46,4 +46,7 @@ inline void DumpEthernetFrame(uint8_t *frame, size_t size) {
   DumpHex(payload, size - kEthernetOverhead);
 }
 
+// Visible for testing.
+uint32_t crc32(uint8_t *message, int length);
+
 }  // namespace orange_tcp

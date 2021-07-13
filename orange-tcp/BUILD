@@ -103,6 +103,16 @@ cc_test(
   ]
 )
 
+cc_test(
+  name = "eth_test",
+  srcs = ["eth_test.cc"],
+  deps = [
+    ":eth",
+    ":gtest",
+  ]
+)
+
+
 cc_binary(
   name = "eth_echo",
   srcs = ["eth_echo.cc"],
