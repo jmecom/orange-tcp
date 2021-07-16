@@ -19,15 +19,17 @@ TEST(SerializableMap, SerializeToDisk) {
   cache[ip] = mac;
 
   std::vector<char> buffer = cache.serialize();
-  std::ofstream file("/tmp/arp_cache",
+  std::ofstream outfile("/tmp/arp_cache",
     std::ios::trunc);
 
-  file.write(buffer.data(), buffer.size());
+  outfile.write(buffer.data(), buffer.size());
+  outfile.close();
 
-  std::ifstream instream("/tmp/arp_cache");
-  std::vector<char> inbuffer((std::istreambuf_iterator<char>(instream)),
-                              std::istreambuf_iterator<char>());
+  std::ifstream infile("/tmp/arp_cache");
+  std::vector<char> inbuffer(32);
+  infile.read(inbuffer.data(), inbuffer.size());
 
+  // printf("inbuffer: %s\n", inbuffer.data());
   cache2.deserialize(inbuffer);
 
   EXPECT_EQ(cache, cache2);

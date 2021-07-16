@@ -36,6 +36,14 @@ struct MacAddr {
   operator std::string() const {
     return this->str();
   }
+
+  static MacAddr FromString(std::string mac) {
+    MacAddr m;
+    sscanf(mac.c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+      &m.addr[0], &m.addr[1], &m.addr[2],
+      &m.addr[3], &m.addr[4], &m.addr[5]);
+    return m;
+  }
 };
 
 struct IpAddr {
