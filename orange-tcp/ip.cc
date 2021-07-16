@@ -20,7 +20,7 @@ constexpr uint8_t kProtoUdp = 16;
 constexpr uint8_t kProtoTcp = 6;
 
 void DumpDatagram(Datagram *datagram) {
-  printf("[ip] %s  ", datagram->hdr.ToString().c_str());
+  printf("[ip] %s  ", datagram->hdr.str().c_str());
   DumpHex(datagram->data, datagram->hdr.total_len - sizeof(Ipv4Header));
 }
 
@@ -43,6 +43,8 @@ uint16_t Checksum(void *buffer, int count) {
   return ~sum;
 }
 
+// Construct an IP datagram. The returned `Datagram` does not own `data`.
+// `data` must remain a valid pointer for the lifetime of the datagram.
 Datagram MakeDatagram(IpAddr src, IpAddr dst, std::vector<uint8_t> data) {
   uint16_net total_len = uint16_net(sizeof(Datagram) + data.size());
   // TODO(jmecom) Check these defaults.
@@ -60,29 +62,28 @@ absl::Status SendDatagram(Socket *socket, IpAddr dst,
   auto src_mac = pair.first;
   auto src_ip = pair.second;
 
-  printf("1\n");
-
-  // TODO(jmecom) Two issues.
-  // 1) This doesn't have a timeout, and it really shouldn't be blocking.
-  // 2) Do I need to consult an IP routing table? Of course ARP requests
-  //    to e.g. 1.1.1.1 will fail. Should the 'dst' actually be like,
-  //    my local router @ 192.168.0.1? Confused.
+  // // TODO(jmecom) Two issues.
+  // // 1) This doesn't have a timeout, and it really shouldn't be blocking.
+  // // 2) Do I need to consult an IP routing table? Of course ARP requests
+  // //    to e.g. 1.1.1.1 will fail. Should the 'dst' actually be like,
+  // //    my local router @ 192.168.0.1? Confused.
   auto mac_status = arp::GetMac(socket, dst);
   if (!mac_status.ok()) {
     return absl::InternalError("Failed to get MAC address");
   }
   MacAddr dst_mac = mac_status.value();
 
-  printf("2\n");
+  // TODO(jmecom) Undo this.
+  // MacAddr dst_mac;
+  // uint8_t a[] = {0x0a, 0x00, 0x27, 0x00, 0x00, 0x00};
+  // memcpy(dst_mac.addr, a, 6);
 
   auto datagram = MakeDatagram(src_ip, dst, data);
-  printf("3\n");
 
   if (absl::GetFlag(FLAGS_dump_ip)) {
     DumpDatagram(&datagram);
   }
 
-  printf("4\n");
   return SendEthernetFrame(socket, src_mac, dst_mac, &datagram,
     datagram.hdr.total_len);
 }

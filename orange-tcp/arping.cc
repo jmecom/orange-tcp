@@ -35,7 +35,7 @@ int ArpRoundTrip(Socket *socket, const IpAddr& ip) {
   auto result = arp::Request(socket, ip, &dst_mac);
   if (absl::IsAlreadyExists(result)) {
     printf("[arping] done, got %s (cached)\n",
-      dst_mac.ToString().c_str());
+      dst_mac.str().c_str());
     return 0;
   }
 
@@ -52,7 +52,7 @@ int ArpRoundTrip(Socket *socket, const IpAddr& ip) {
     return -1;
   }
 
-  printf("[arping] done, got %s\n", dst_mac.ToString().c_str());
+  printf("[arping] done, got %s\n", dst_mac.str().c_str());
 
   return 0;
 }

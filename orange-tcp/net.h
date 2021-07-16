@@ -28,9 +28,13 @@ struct MacAddr {
     return (memcmp(addr, other.addr, kMacAddrLen) < 0);
   }
 
-  std::string ToString() const {
+  std::string str() const {
     return absl::StrFormat("%02x:%02x:%02x:%02x:%02x:%02x",
       addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+  }
+
+  operator std::string() const {
+    return this->str();
   }
 };
 
@@ -45,8 +49,12 @@ struct IpAddr {
     return addr < other.addr;
   }
 
-  std::string ToString() const {
+  std::string str() const {
     return std::string(inet_ntoa(static_cast<in_addr>(addr)));
+  }
+
+  operator std::string() const {
+    return this->str();
   }
 
   static IpAddr FromString(std::string ip) {

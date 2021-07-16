@@ -32,7 +32,7 @@ struct Packet {
   MacAddr dst_hw_addr;
   IpAddr dst_ip_addr;
 
-  std::string ToString() const {
+  std::string str() const {
     // clang-format off
     return absl::StrFormat(
       "arp_packet:\n"
@@ -46,9 +46,9 @@ struct Packet {
       "  dst_hw_addr: %s\n"
       "  dst_ip_addr: %s",
       hw_type, p_type, hw_addr_len, p_len,
-      opcode, src_hw_addr.ToString(),
-      src_ip_addr.ToString(), dst_hw_addr.ToString(),
-      dst_ip_addr.ToString());
+      opcode, src_hw_addr.str(),
+      src_ip_addr.str(), dst_hw_addr.str(),
+      dst_ip_addr.str());
     // clang-format on
   }
 } __attribute__((packed));
@@ -60,6 +60,10 @@ absl::Status Request(Socket *socket, const IpAddr& dst_ip,
                      MacAddr *mac_addr_out);
 absl::Status HandleRequest(Socket *socket);
 absl::Status HandleResponse(Socket *socket, MacAddr *mac_addr_out);
+
+// Visible for testing
+void MaybeLoadArpCache();
+void SerializeArpCache();
 
 }  // namespace arp
 }  // namespace orange_tcp

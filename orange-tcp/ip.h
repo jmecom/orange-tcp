@@ -26,7 +26,7 @@ struct Ipv4Header {
   IpAddr src;
   IpAddr dst;
 
-  std::string ToString() const {
+  std::string str() const {
     // clang-format off
     return absl::StrFormat(
       "ip_datagram:\n"
@@ -44,7 +44,7 @@ struct Ipv4Header {
       "  dst: %s\n",
       version, header_len, tos, total_len,
       frag_id, frag_flags, frag_offset, ttl,
-      proto, checksum, src.ToString(), dst.ToString());
+      proto, checksum, src.str(), dst.str());
     // clang-format on
   }
 } __attribute__((packed));
@@ -53,10 +53,6 @@ struct Datagram {
   Ipv4Header hdr;
   uint8_t *data;
 } __attribute__((packed));
-
-// Construct an IP datagram. The returned `Datagram` does not own `data`.
-// `data` must remain a valid pointer for the lifetime of the datagram.
-Datagram MakeDatagram(IpAddr src, IpAddr dst, std::vector<uint8_t> data);
 
 absl::Status SendDatagram(Socket *socket, IpAddr dst,
   std::vector<uint8_t> data);

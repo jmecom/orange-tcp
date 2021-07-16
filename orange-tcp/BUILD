@@ -40,6 +40,7 @@ cc_library(
   srcs = ["arp.cc"],
   hdrs = ["arp.h"],
   deps = [
+    ":serializable_map",
     ":socket",
     ":eth",
     ":net",
@@ -82,6 +83,11 @@ cc_library(
 )
 
 cc_library(
+  name = "serializable_map",
+  hdrs = ["serializable_map.h"],
+)
+
+cc_library(
   name = "network_sim",
   hdrs = ["network_sim.h"],
   srcs = ["network_sim.cc"],
@@ -102,6 +108,18 @@ cc_test(
     ":gtest",
   ]
 )
+
+cc_test(
+  name = "serializable_map_test",
+  srcs = ["serializable_map_test.cc"],
+  deps = [
+    ":serializable_map",
+    ":gtest",
+    ":net",
+    ":absl",
+  ]
+)
+
 
 cc_test(
   name = "eth_test",

@@ -16,9 +16,7 @@
 namespace orange_tcp {
 
 IpAddr RandomIp() {
-  srand(1);
-  IpAddr ip;
-  for (int i = 0; i < kIpAddrLen; i++) ip.addr[i] = rand();
+  IpAddr ip; //  TODO
   return ip;
 }
 
@@ -56,8 +54,8 @@ class Host {
   const IpAddr ip() { return ip_; }
 
   void Print() {
-    printf("(ip: %s, mac: %s)\n", ip_.ToString().c_str(),
-      mac_.ToString().c_str());
+    printf("(ip: %s, mac: %s)\n", ip_.str().c_str(),
+      mac_.str().c_str());
   }
 
  private:
@@ -74,7 +72,7 @@ class SimulatedNetwork {
     for (auto& h : hosts_)
       if (h->mac() == mac) return h.get();
     throw std::invalid_argument(absl::StrFormat("No host for MAC %s",
-      mac.ToString()));
+      mac.str()));
   }
 
   void AddHostWithMac(MacAddr mac) {

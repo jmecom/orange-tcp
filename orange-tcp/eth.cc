@@ -65,8 +65,6 @@ absl::Status SendEthernetFrame(Socket *socket,
 
 absl::Status RecvEthernetFrame(Socket *socket,
   std::vector<uint8_t> *payload, size_t payload_size) {
-  bool log = absl::GetFlag(FLAGS_dump_ethernet);
-
   if (payload_size < kEthernetPayloadMin) {
     payload_size = kEthernetPayloadMin;
   }
@@ -78,38 +76,12 @@ absl::Status RecvEthernetFrame(Socket *socket,
 
   uint8_t frame[payload_size + kEthernetOverhead] = {0};
 
-  // TODO Maybe remove
-  EthernetHeader *hdr;
-  auto mac_result = socket->GetHostMacAddress();
-  if (!mac_result.ok()) {
-    return absl::InternalError("Failed to get host MAC");
+  ssize_t size = socket->RecvAll(frame, sizeof(frame));
+  if (size == -1) {
+    return absl::InternalError("No data");
   }
-  MacAddr host_mac = mac_result.value();
 
-  ssize_t size;
-  for (;;) {
-    printf("Loop\n");
-    memset(frame, 0, sizeof(frame)); // TODO Remove
-    size = socket->RecvAll(frame, sizeof(frame));
-    if (size == -1) {
-      return absl::InternalError("No data");
-    }
-    hdr = reinterpret_cast<EthernetHeader *>(frame);
-    if (hdr->src_mac != host_mac) {
-      break;
-    }
-    if (log) {
-      printf("[eth] Ignoring frame from own MAC address\n");
-    }
-  }
-  // END TODO Maybe remove
-
-  // ssize_t size = socket->RecvAll(frame, sizeof(frame));
-  // if (size == -1) {
-  //   return absl::InternalError("No data");
-  // }
-
-  if (log) {
+  if (absl::GetFlag(FLAGS_dump_ethernet)) {
     DumpEthernetFrame(frame, size);
   }
 
@@ -119,10 +91,10 @@ absl::Status RecvEthernetFrame(Socket *socket,
   uint32_t crc = crc32(frame, size - kCrcSize);
   printf("Calculated 0x%04x, expected 0x%04x\n", crc, expected_crc);
 
-  // if (crc != expected_crc) {
-  //   return absl::InternalError(
-  //     absl::StrFormat("CRC mismatch: 0x%04x vs 0x%04x", crc, expected_crc));
-  // }
+  if (crc != expected_crc) {
+    return absl::InternalError(
+      absl::StrFormat("CRC mismatch: 0x%04x vs 0x%04x", crc, expected_crc));
+  }
 
   uint8_t *sent_payload = frame + sizeof(EthernetHeader);
   payload->resize(size - kEthernetOverhead);

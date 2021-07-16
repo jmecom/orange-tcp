@@ -1,20 +1,45 @@
 #include "arp.h"
 #include "net.h"
 #include "eth.h"
+#include "serializable_map.h"
 
 #include <arpa/inet.h>
 #include <memory>
 #include <utility>
+#include <iterator>
+#include <algorithm>
+#include <fstream>
 
 #include "absl/strings/str_format.h"
 #include "absl/flags/flag.h"
 
 ABSL_FLAG(bool, dump_arp, false, "Set to log ARP debugging information.");
+ABSL_FLAG(std::string, arp_cache, "/tmp/arp_cache", "ARP cache file location.");
 
 namespace orange_tcp {
 namespace arp {
 
-static std::map<IpAddr, MacAddr> g_arp_cache;
+static serializable_map<IpAddr, MacAddr> g_arp_cache;
+
+void MaybeLoadArpCache() {
+  static bool loaded = false;
+  if (loaded) return;
+
+  std::ifstream cache(absl::GetFlag(FLAGS_arp_cache), std::ios::binary);
+  std::vector<char> buffer((std::istreambuf_iterator<char>(cache)),
+                            std::istreambuf_iterator<char>());
+
+  g_arp_cache.deserialize(buffer);
+
+  loaded = true;
+}
+
+void SerializeArpCache() {
+  std::vector<char> buffer = g_arp_cache.serialize();
+  std::ofstream file(absl::GetFlag(FLAGS_arp_cache),
+    std::ios::binary | std::ios::ate);
+  file.write(buffer.data(), buffer.size());
+}
 
 absl::StatusOr<MacAddr> GetMac(Socket *socket, const IpAddr& ip) {
   MacAddr dst_mac;
@@ -39,6 +64,8 @@ absl::StatusOr<MacAddr> GetMac(Socket *socket, const IpAddr& ip) {
 
 absl::Status Request(Socket *socket, const IpAddr& dst_ip,
                      MacAddr *mac_addr_out) {
+  MaybeLoadArpCache();
+
   if (g_arp_cache.find(dst_ip) != g_arp_cache.end()) {
     *mac_addr_out = g_arp_cache[dst_ip];
     return absl::AlreadyExistsError("MAC found");
@@ -60,7 +87,7 @@ absl::Status Request(Socket *socket, const IpAddr& dst_ip,
     kBroadcastMac, dst_ip);
 
   if (absl::GetFlag(FLAGS_dump_arp)) {
-    printf("[arp] Sending request %s\n", arp_request.ToString().c_str());
+    printf("[arp] Sending request %s\n", arp_request.str().c_str());
   }
 
   return SendEthernetFrame(socket, src_mac, kBroadcastMac,
@@ -80,7 +107,7 @@ absl::Status HandleRequest(Socket *socket) {
   Packet *arp_request = reinterpret_cast<Packet *>(&payload[0]);
 
   if (log) {
-    printf("[arp] Handling request %s\n", arp_request->ToString().c_str());
+    printf("[arp] Handling request %s\n", arp_request->str().c_str());
   }
 
   // Is the request valid?
@@ -99,8 +126,8 @@ absl::Status HandleRequest(Socket *socket) {
   if (arp_request->dst_ip_addr != ip) {
     if (log) {
       printf("[arp] Ignoring request: got %s but host is %s\n",
-      arp_request->dst_ip_addr.ToString().c_str(),
-      ip.ToString().c_str());
+      arp_request->dst_ip_addr.str().c_str(),
+      ip.str().c_str());
     }
     return absl::OkStatus();
   }
@@ -118,7 +145,7 @@ absl::Status HandleRequest(Socket *socket) {
 
   if (log) {
     printf("[arp] Sending response %s\n",
-      arp_response.ToString().c_str());
+      arp_response.str().c_str());
   }
 
   return SendEthernetFrame(socket, mac, arp_response.dst_hw_addr,
@@ -126,6 +153,8 @@ absl::Status HandleRequest(Socket *socket) {
 }
 
 absl::Status HandleResponse(Socket *socket, MacAddr *mac_addr_out) {
+  MaybeLoadArpCache();
+
   std::vector<uint8_t> payload;
   auto status = RecvEthernetFrame(socket, &payload, sizeof(Packet));
   if (!status.ok()) {
@@ -136,7 +165,7 @@ absl::Status HandleResponse(Socket *socket, MacAddr *mac_addr_out) {
 
   if (absl::GetFlag(FLAGS_dump_arp)) {
     printf("[arp] Got response %s\n",
-      arp_response->ToString().c_str());
+      arp_response->str().c_str());
   }
 
   if (arp_response->opcode != kArpResponse) {
@@ -147,6 +176,7 @@ absl::Status HandleResponse(Socket *socket, MacAddr *mac_addr_out) {
   memcpy(mac_addr_out->addr, arp_response->src_hw_addr.addr, kMacAddrLen);
 
   g_arp_cache[arp_response->src_ip_addr] = *mac_addr_out;
+  SerializeArpCache();
 
   return absl::OkStatus();
 }

@@ -30,9 +30,12 @@ int Server() {
 int Ping(Socket *socket, const IpAddr& ip) {
   // TODO(jmecom) This is wrong
   std::vector<uint8_t> empty;
-  printf("bout to send\n");
   auto status = ip::SendDatagram(socket, ip, empty);
-  printf("Got %s\n", status.message().data());
+  if (!status.ok()) {
+    printf("[ping] Failed to send");
+    return 1;
+  }
+
   return 0;
 }
 
