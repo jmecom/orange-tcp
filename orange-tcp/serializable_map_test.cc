@@ -6,17 +6,17 @@
 
 namespace orange_tcp {
 
+static IpAddr kIp1 = { .addr = 0xC0A86301 };
+static IpAddr kIp2 = { .addr = 0xC0A86302 };
+static MacAddr kMac1 = { .addr = {0x0a, 0x00, 0x27, 0x00, 0x00, 0x01}};
+static MacAddr kMac2 = { .addr = {0x0a, 0x00, 0x27, 0x00, 0x00, 0x02}};
+
 TEST(SerializableMap, SerializeToDisk) {
   serializable_map<IpAddr, MacAddr> cache;
   serializable_map<IpAddr, MacAddr> cache2;
 
-  IpAddr ip;
-  ip.addr = 0xC0A86301;
-  MacAddr mac;
-  uint8_t m[] = {0x0a, 0x00, 0x27, 0x00, 0x00, 0x00};
-  memcpy(mac.addr, m, 6);
-
-  cache[ip] = mac;
+  cache[kIp1] = kMac1;
+  cache[kIp2] = kMac2;
 
   std::vector<char> buffer = cache.serialize();
   std::ofstream outfile("/tmp/arp_cache",
@@ -26,10 +26,10 @@ TEST(SerializableMap, SerializeToDisk) {
   outfile.close();
 
   std::ifstream infile("/tmp/arp_cache");
-  std::vector<char> inbuffer(32);
+  size_t size = buffer.size();
+  std::vector<char> inbuffer(size);
   infile.read(inbuffer.data(), inbuffer.size());
 
-  // printf("inbuffer: %s\n", inbuffer.data());
   cache2.deserialize(inbuffer);
 
   EXPECT_EQ(cache, cache2);

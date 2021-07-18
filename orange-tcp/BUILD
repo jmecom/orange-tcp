@@ -55,6 +55,7 @@ cc_library(
   deps = [
     ":net",
     ":socket",
+    ":serializable_map",
     ":eth",
     ":arp",
     ":absl",

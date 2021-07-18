@@ -55,7 +55,7 @@ struct Datagram {
 } __attribute__((packed));
 
 absl::Status SendDatagram(Socket *socket, IpAddr dst,
-  std::vector<uint8_t> data);
+  uint8_t *data, size_t size);
 
 void DumpDatagram(Datagram *datagram);
 

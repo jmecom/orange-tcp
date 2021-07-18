@@ -25,7 +25,7 @@ void MaybeLoadArpCache() {
   static bool loaded = false;
   if (loaded) return;
 
-  std::ifstream cache(absl::GetFlag(FLAGS_arp_cache), std::ios::binary);
+  std::ifstream cache(absl::GetFlag(FLAGS_arp_cache));
   std::vector<char> buffer((std::istreambuf_iterator<char>(cache)),
                             std::istreambuf_iterator<char>());
 

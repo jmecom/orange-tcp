@@ -2,12 +2,16 @@
 
 #include "arp.h"
 #include "eth.h"
+#include "serializable_map.h"
 
 #include <utility>
+#include <fstream>
 
 #include "absl/flags/flag.h"
 
 ABSL_FLAG(bool, dump_ip, false, "Set to log IP debugging information.");
+ABSL_FLAG(std::string, routing_table, "/tmp/routing_table",
+  "Routing table file location.");
 
 namespace orange_tcp {
 namespace ip {
@@ -18,10 +22,30 @@ constexpr uint8_t kTos = 0;
 constexpr uint8_t kTtl = 64;
 constexpr uint8_t kProtoUdp = 16;
 constexpr uint8_t kProtoTcp = 6;
+static const IpAddr kDefaultDst = { .addr = 0 };
+
+// Stores (destination, gateway) pairs.
+// Uses 0.0.0.0 as 'default' for the destination, even though this is
+// not standard. (https://en.wikipedia.org/wiki/0.0.0.0)
+static serializable_map<IpAddr, IpAddr> g_routing_table;
+
+void MaybeLoadRoutingTable() {
+  static bool loaded = false;
+  if (loaded) return;
+
+  std::ifstream table(absl::GetFlag(FLAGS_routing_table));
+  std::vector<char> buffer((std::istreambuf_iterator<char>(table)),
+                            std::istreambuf_iterator<char>());
+
+  g_routing_table.deserialize(buffer);
+
+  loaded = true;
+}
 
 void DumpDatagram(Datagram *datagram) {
   printf("[ip] %s  ", datagram->hdr.str().c_str());
-  DumpHex(datagram->data, datagram->hdr.total_len - sizeof(Ipv4Header));
+  auto len = static_cast<int>(datagram->hdr.total_len) - sizeof(Ipv4Header);
+  DumpHex(datagram->data, len);
 }
 
 // https://datatracker.ietf.org/doc/html/rfc1071
@@ -45,47 +69,48 @@ uint16_t Checksum(void *buffer, int count) {
 
 // Construct an IP datagram. The returned `Datagram` does not own `data`.
 // `data` must remain a valid pointer for the lifetime of the datagram.
-Datagram MakeDatagram(IpAddr src, IpAddr dst, std::vector<uint8_t> data) {
-  uint16_net total_len = uint16_net(sizeof(Datagram) + data.size());
+Datagram MakeDatagram(IpAddr src, IpAddr dst,
+                      uint8_t *data, size_t size) {
+  uint16_net total_len = uint16_net(sizeof(Ipv4Header) + size);
   // TODO(jmecom) Check these defaults.
   Ipv4Header hdr = Ipv4Header(kIpv4, kHeaderLen, kTos,
     total_len, uint16_net(0), 0, 0, kTtl, kProtoUdp, uint16_net(0), src, dst);
   uint16_net checksum = uint16_net(Checksum(&hdr, sizeof(hdr)));
   hdr.checksum = checksum;
-  return Datagram(hdr, data.data());
+  return Datagram(hdr, data);
 }
 
 absl::Status SendDatagram(Socket *socket, IpAddr dst,
-                          std::vector<uint8_t> data) {
+                          uint8_t *data, size_t size) {
+  MaybeLoadRoutingTable();
+
   auto mac_ip_status = socket->GetHostMacAndIp();
   std::pair<MacAddr, IpAddr> pair = mac_ip_status.value();
   auto src_mac = pair.first;
   auto src_ip = pair.second;
 
-  // // TODO(jmecom) Two issues.
-  // // 1) This doesn't have a timeout, and it really shouldn't be blocking.
-  // // 2) Do I need to consult an IP routing table? Of course ARP requests
-  // //    to e.g. 1.1.1.1 will fail. Should the 'dst' actually be like,
-  // //    my local router @ 192.168.0.1? Confused.
-  auto mac_status = arp::GetMac(socket, dst);
+  auto routed_dst = dst;
+
+  if (g_routing_table.find(kDefaultDst) != g_routing_table.end()) {
+    routed_dst = g_routing_table[kDefaultDst];
+  } else if (g_routing_table.find(dst) != g_routing_table.end()) {
+    routed_dst = g_routing_table[dst];
+  }
+
+  auto mac_status = arp::GetMac(socket, routed_dst);
   if (!mac_status.ok()) {
     return absl::InternalError("Failed to get MAC address");
   }
   MacAddr dst_mac = mac_status.value();
 
-  // TODO(jmecom) Undo this.
-  // MacAddr dst_mac;
-  // uint8_t a[] = {0x0a, 0x00, 0x27, 0x00, 0x00, 0x00};
-  // memcpy(dst_mac.addr, a, 6);
-
-  auto datagram = MakeDatagram(src_ip, dst, data);
+  auto datagram = MakeDatagram(src_ip, dst, data, size);
 
   if (absl::GetFlag(FLAGS_dump_ip)) {
     DumpDatagram(&datagram);
   }
 
   return SendEthernetFrame(socket, src_mac, dst_mac, &datagram,
-    datagram.hdr.total_len);
+    static_cast<int>(datagram.hdr.total_len));
 }
 
 }  // namespace ip
