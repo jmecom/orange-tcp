@@ -39,7 +39,7 @@ struct Ipv4Header {
       "  frag_offset: %d\n"
       "  ttl: %d\n"
       "  proto: %d\n"
-      "  checksum: %d\n"
+      "  checksum: 0x%02x\n"
       "  src: %s\n"
       "  dst: %s\n",
       version, header_len, tos, total_len,
@@ -53,6 +53,8 @@ struct Datagram {
   Ipv4Header hdr;
   uint8_t *data;
 } __attribute__((packed));
+
+uint16_net Checksum(void *buffer, int count);
 
 absl::Status SendDatagram(Socket *socket, IpAddr dst,
   uint8_t *data, size_t size);

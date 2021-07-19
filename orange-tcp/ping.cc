@@ -9,7 +9,6 @@
 #include "absl/flags/parse.h"
 #include "absl/flags/usage.h"
 
-ABSL_FLAG(bool, server, false, "True -> server, false -> client");
 ABSL_FLAG(std::string, ip, "",
   "Destination IP address (numbers-and-dots notation)");
 ABSL_FLAG(int, num_requests, 1,
@@ -18,19 +17,10 @@ ABSL_FLAG(int, num_requests, 1,
 namespace orange_tcp {
 namespace ping {
 
-int Server() {
-  auto socket = RawSocket::CreateOrDie();
-
-  for (;;) {
-  }
-
-  return 0;
-}
-
 int Ping(Socket *socket, const IpAddr& ip) {
-  // TODO(jmecom) This is wrong
-  std::vector<uint8_t> empty = {1, 2, 3, 4};
-  auto status = ip::SendDatagram(socket, ip, empty.data(), empty.size());
+  icmp::EchoRequest request = icmp::MakeEchoRequest();
+  auto status = ip::SendDatagram(socket, ip,
+    reinterpret_cast<uint8_t *>(&request), sizeof(request));
   if (!status.ok()) {
     printf("[ping] Failed to send");
     return 1;
@@ -39,7 +29,7 @@ int Ping(Socket *socket, const IpAddr& ip) {
   return 0;
 }
 
-int Client() {
+int Main() {
   std::string ip_str = absl::GetFlag(FLAGS_ip);
   if (ip_str.empty()) {
     printf("[ping] must set ip address\n");
@@ -58,19 +48,11 @@ int Client() {
   return 0;
 }
 
-int Main() {
-  if (absl::GetFlag(FLAGS_server)) {
-    return Server();
-  } else {
-    return Client();
-  }
-}
-
 }  // namespace ping
 }  // namespace orange_tcp
 
 int main(int argc, char **argv) {
-  absl::SetProgramUsageMessage("Ethernet echo test");
+  absl::SetProgramUsageMessage("Issue ICMP echo requests");
   absl::ParseCommandLine(argc, argv);
   return orange_tcp::ping::Main();
 }

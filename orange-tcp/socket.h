@@ -63,7 +63,7 @@ class RawSocket : public Socket {
   int interface_index_;
 
   // TODO(jmecom) Shouldn't be hardcoded, but good enough for now.
-  const char *kEthDevice = "eth1";
+  const char *kEthDevice = "eth0";
 };
 
 }  // namespace orange_tcp

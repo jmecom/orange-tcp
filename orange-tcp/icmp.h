@@ -20,5 +20,7 @@ struct EchoRequest {
   uint16_net sequence;
 };
 
+EchoRequest MakeEchoRequest();
+
 }  // namespace icmp
 }  // namespace orange_tcp

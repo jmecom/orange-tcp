@@ -36,3 +36,20 @@ And on the client:
 ```
 $ ./arping --ip 172.17.0.3 --num_requests 2
 ```
+
+## Testing ICMP
+
+On the host:
+```
+$ sudo tcpdump icmp
+```
+
+And on the guest:
+```
+$ ping 1.1.1.1
+```
+
+And then, on the guest, with custom implementation:
+```
+$ ./ping --ip 1.1.1.1
+```

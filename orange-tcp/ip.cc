@@ -49,7 +49,7 @@ void DumpDatagram(Datagram *datagram) {
 }
 
 // https://datatracker.ietf.org/doc/html/rfc1071
-uint16_t Checksum(void *buffer, int count) {
+uint16_net Checksum(void *buffer, int count) {
   uint32_t sum = 0;
   uint16_t *ptr = reinterpret_cast<uint16_t *>(buffer);
 
@@ -64,7 +64,8 @@ uint16_t Checksum(void *buffer, int count) {
   while (sum >> 16)
     sum = (sum & 0xffff) + (sum >> 16);
 
-  return ~sum;
+  sum = ~sum;
+  return uint16_net(sum);
 }
 
 // Construct an IP datagram. The returned `Datagram` does not own `data`.
@@ -75,7 +76,7 @@ Datagram MakeDatagram(IpAddr src, IpAddr dst,
   // TODO(jmecom) Check these defaults.
   Ipv4Header hdr = Ipv4Header(kIpv4, kHeaderLen, kTos,
     total_len, uint16_net(0), 0, 0, kTtl, kProtoUdp, uint16_net(0), src, dst);
-  uint16_net checksum = uint16_net(Checksum(&hdr, sizeof(hdr)));
+  uint16_net checksum = Checksum(&hdr, sizeof(hdr));
   hdr.checksum = checksum;
   return Datagram(hdr, data);
 }
@@ -86,10 +87,10 @@ absl::Status SendDatagram(Socket *socket, IpAddr dst,
 
   auto mac_ip_status = socket->GetHostMacAndIp();
   std::pair<MacAddr, IpAddr> pair = mac_ip_status.value();
-  auto src_mac = pair.first;
-  auto src_ip = pair.second;
+  MacAddr src_mac = pair.first;
+  IpAddr src_ip = pair.second;
 
-  auto routed_dst = dst;
+  IpAddr routed_dst = dst;
 
   if (g_routing_table.find(kDefaultDst) != g_routing_table.end()) {
     routed_dst = g_routing_table[kDefaultDst];
