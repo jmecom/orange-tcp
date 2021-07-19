@@ -13,13 +13,11 @@ namespace orange_tcp {
 namespace ip {
 
 struct Ipv4Header {
-  uint8_t version : 4;
-  uint8_t header_len : 4;
+  uint8_t version_and_header_len;
   uint8_t tos;
   uint16_net total_len;
   uint16_net frag_id;
-  uint16_t frag_flags : 3;
-  uint16_t frag_offset : 13;
+  uint16_t frag_flags_and_offset;
   uint8_t ttl;
   uint8_t proto;
   uint16_net checksum;
@@ -42,24 +40,29 @@ struct Ipv4Header {
       "  checksum: 0x%02x\n"
       "  src: %s\n"
       "  dst: %s\n",
-      version, header_len, tos, total_len,
-      frag_id, frag_flags, frag_offset, ttl,
+      (version_and_header_len & 0xf0) >> 4,
+      version_and_header_len & 0x0f,
+      tos, total_len,
+      frag_id,
+      (frag_flags_and_offset & 0b1110000000000000) >> 13,
+      frag_flags_and_offset & 0b0001111111111111,
+      ttl,
       proto, checksum, src.str(), dst.str());
     // clang-format on
   }
 } __attribute__((packed));
 
-struct Datagram {
-  Ipv4Header hdr;
-  uint8_t *data;
-} __attribute__((packed));
+enum Protocol: uint8_t {
+  icmp = 1,
+  tcp = 6,
+  udp = 17,
+};
 
 uint16_net Checksum(void *buffer, int count);
 
 absl::Status SendDatagram(Socket *socket, IpAddr dst,
-  uint8_t *data, size_t size);
-
-void DumpDatagram(Datagram *datagram);
+  uint8_t *data, size_t size,
+  Protocol proto = Protocol::udp);
 
 }  // namespace ip
 }  // namespace orange_tcp

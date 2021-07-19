@@ -20,7 +20,8 @@ namespace ping {
 int Ping(Socket *socket, const IpAddr& ip) {
   icmp::EchoRequest request = icmp::MakeEchoRequest();
   auto status = ip::SendDatagram(socket, ip,
-    reinterpret_cast<uint8_t *>(&request), sizeof(request));
+    reinterpret_cast<uint8_t *>(&request), sizeof(request),
+    ip::Protocol::icmp);
   if (!status.ok()) {
     printf("[ping] Failed to send");
     return 1;

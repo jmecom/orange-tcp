@@ -9,19 +9,15 @@
 
 #include "absl/flags/flag.h"
 
-ABSL_FLAG(bool, dump_ip, false, "Set to log IP debugging information.");
 ABSL_FLAG(std::string, routing_table, "/tmp/routing_table",
   "Routing table file location.");
 
 namespace orange_tcp {
 namespace ip {
 
-constexpr uint8_t kIpv4 = 4;
-constexpr uint8_t kHeaderLen = 5;
+constexpr uint8_t kIpv4AndDefaultHeaderLen = 0x45;
 constexpr uint8_t kTos = 0;
 constexpr uint8_t kTtl = 64;
-constexpr uint8_t kProtoUdp = 16;
-constexpr uint8_t kProtoTcp = 6;
 static const IpAddr kDefaultDst = { .addr = 0 };
 
 // Stores (destination, gateway) pairs.
@@ -40,12 +36,6 @@ void MaybeLoadRoutingTable() {
   g_routing_table.deserialize(buffer);
 
   loaded = true;
-}
-
-void DumpDatagram(Datagram *datagram) {
-  printf("[ip] %s  ", datagram->hdr.str().c_str());
-  auto len = static_cast<int>(datagram->hdr.total_len) - sizeof(Ipv4Header);
-  DumpHex(datagram->data, len);
 }
 
 // https://datatracker.ietf.org/doc/html/rfc1071
@@ -68,21 +58,27 @@ uint16_net Checksum(void *buffer, int count) {
   return uint16_net(sum);
 }
 
-// Construct an IP datagram. The returned `Datagram` does not own `data`.
-// `data` must remain a valid pointer for the lifetime of the datagram.
-Datagram MakeDatagram(IpAddr src, IpAddr dst,
-                      uint8_t *data, size_t size) {
+std::vector<uint8_t> MakeDatagram(IpAddr src, IpAddr dst,
+                                  uint8_t *payload, size_t size,
+                                  Protocol proto = Protocol::udp) {
+  std::vector<uint8_t> datagram;
   uint16_net total_len = uint16_net(sizeof(Ipv4Header) + size);
-  // TODO(jmecom) Check these defaults.
-  Ipv4Header hdr = Ipv4Header(kIpv4, kHeaderLen, kTos,
-    total_len, uint16_net(0), 0, 0, kTtl, kProtoUdp, uint16_net(0), src, dst);
+  datagram.resize(total_len);
+
+  Ipv4Header hdr = Ipv4Header(kIpv4AndDefaultHeaderLen, kTos,
+    total_len, uint16_net(0), 0, kTtl, proto, uint16_net(0), src, dst);
   uint16_net checksum = Checksum(&hdr, sizeof(hdr));
   hdr.checksum = checksum;
-  return Datagram(hdr, data);
+
+  memcpy(&datagram[0], &hdr, sizeof(hdr));
+  memcpy(&datagram[sizeof(hdr)], payload, size);
+
+  return datagram;
 }
 
 absl::Status SendDatagram(Socket *socket, IpAddr dst,
-                          uint8_t *data, size_t size) {
+                          uint8_t *data, size_t size,
+                          Protocol proto) {
   MaybeLoadRoutingTable();
 
   auto mac_ip_status = socket->GetHostMacAndIp();
@@ -104,14 +100,10 @@ absl::Status SendDatagram(Socket *socket, IpAddr dst,
   }
   MacAddr dst_mac = mac_status.value();
 
-  auto datagram = MakeDatagram(src_ip, dst, data, size);
+  auto datagram = MakeDatagram(src_ip, dst, data, size, proto);
 
-  if (absl::GetFlag(FLAGS_dump_ip)) {
-    DumpDatagram(&datagram);
-  }
-
-  return SendEthernetFrame(socket, src_mac, dst_mac, &datagram,
-    static_cast<int>(datagram.hdr.total_len));
+  return SendEthernetFrame(socket, src_mac, dst_mac, datagram.data(),
+    datagram.size());
 }
 
 }  // namespace ip
