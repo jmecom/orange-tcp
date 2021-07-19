@@ -9,9 +9,13 @@ EchoRequest MakeEchoRequest() {
   EchoRequest out;
   out.hdr.type = 8;
   out.hdr.code = 0;
-  out.hdr.checksum = ip::Checksum(&out.hdr, sizeof(out.hdr));
-  out.id = uint16_net(0x8181);
+  out.hdr.checksum = 0;
+  // out.hdr.checksum = ip::Checksum(&out.hdr, sizeof(out.hdr));
+  out.id = uint16_net(0x1337);
   out.sequence = seq++;
+  out.hdr.checksum = ip::Checksum(&out, sizeof(out));
+  printf("0x%04x\n", (uint16_t)out.hdr.checksum);
+  printf("0x%04x\n", uint16_net(out.hdr.checksum));
 
   return out;
 }

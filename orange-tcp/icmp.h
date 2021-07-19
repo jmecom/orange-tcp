@@ -9,7 +9,7 @@ namespace icmp {
 struct IcmpHeader {
   uint8_t type;
   uint8_t code;
-  uint16_net checksum;
+  uint16_t checksum;
 } __attribute__((packed));
 
 // ICMP Control Messages

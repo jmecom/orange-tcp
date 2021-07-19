@@ -39,7 +39,7 @@ void MaybeLoadRoutingTable() {
 }
 
 // https://datatracker.ietf.org/doc/html/rfc1071
-uint16_net Checksum(void *buffer, int count) {
+uint16_t Checksum(void *buffer, int count) {
   uint32_t sum = 0;
   uint16_t *ptr = reinterpret_cast<uint16_t *>(buffer);
 
@@ -55,7 +55,7 @@ uint16_net Checksum(void *buffer, int count) {
     sum = (sum & 0xffff) + (sum >> 16);
 
   sum = ~sum;
-  return uint16_net(sum);
+  return sum;
 }
 
 std::vector<uint8_t> MakeDatagram(IpAddr src, IpAddr dst,
@@ -67,8 +67,7 @@ std::vector<uint8_t> MakeDatagram(IpAddr src, IpAddr dst,
 
   Ipv4Header hdr = Ipv4Header(kIpv4AndDefaultHeaderLen, kTos,
     total_len, uint16_net(0), 0, kTtl, proto, uint16_net(0), src, dst);
-  uint16_net checksum = Checksum(&hdr, sizeof(hdr));
-  hdr.checksum = checksum;
+  hdr.checksum = Checksum(&hdr, sizeof(hdr));
 
   memcpy(&datagram[0], &hdr, sizeof(hdr));
   memcpy(&datagram[sizeof(hdr)], payload, size);
