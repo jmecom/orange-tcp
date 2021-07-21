@@ -10,7 +10,8 @@ namespace orange_tcp {
 
 absl::StatusOr<std::unique_ptr<Socket>> RawSocket::Create() {
   // Not using ETH_P_ALL since it also receives outgoing frames.
-  int fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_IP | ETH_P_ARP));
+  // int fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_IP | ETH_P_ARP));
+  int fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   if (fd < 0) {
     return absl::InternalError(
       absl::StrFormat("Failed to create socket: %s",
@@ -41,7 +42,14 @@ ssize_t RawSocket::Send(void *buffer, size_t length) {
 }
 
 ssize_t RawSocket::Recv(void *buffer, size_t length) {
-  return recv(fd_, buffer, length, 0);
+  // return recv(fd_, buffer, length, 0);
+
+  printf("recv here\n");
+  struct sockaddr saddr;
+  int saddr_size = sizeof(saddr);
+  ssize_t size = recvfrom(fd_, buffer, length,
+                          0, &saddr, (socklen_t *)&saddr_size);
+  return size;
 }
 
 ssize_t RawSocket::SendTo(void *buffer, size_t length, MacAddr dst) {

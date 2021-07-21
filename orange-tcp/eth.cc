@@ -76,7 +76,7 @@ absl::Status RecvEthernetFrame(Socket *socket,
 
   uint8_t frame[payload_size + kEthernetOverhead] = {0};
 
-  ssize_t size = socket->RecvAll(frame, sizeof(frame));
+  ssize_t size = socket->Recv(frame, sizeof(frame));
   if (size == -1) {
     return absl::InternalError("No data");
   }
@@ -87,9 +87,7 @@ absl::Status RecvEthernetFrame(Socket *socket,
 
   uint32_t expected_crc =
     *(reinterpret_cast<uint32_t *>(frame + size - kCrcSize));
-  DumpHex(frame, size - kCrcSize);
   uint32_t crc = crc32(frame, size - kCrcSize);
-  printf("Calculated 0x%04x, expected 0x%04x\n", crc, expected_crc);
 
   if (crc != expected_crc) {
     return absl::InternalError(

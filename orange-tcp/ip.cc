@@ -18,6 +18,7 @@ namespace ip {
 constexpr uint8_t kIpv4AndDefaultHeaderLen = 0x45;
 constexpr uint8_t kTos = 0;
 constexpr uint8_t kTtl = 64;
+
 static const IpAddr kDefaultDst = { .addr = 0 };
 
 // Stores (destination, gateway) pairs.
@@ -103,6 +104,22 @@ absl::Status SendDatagram(Socket *socket, IpAddr dst,
 
   return SendEthernetFrame(socket, src_mac, dst_mac, datagram.data(),
     datagram.size());
+}
+
+absl::Status RecvDatagram(Socket *socket, std::vector<uint8_t> *data,
+                          size_t data_size) {
+  std::vector<uint8_t> datagram;
+  datagram.resize(data_size + sizeof(Ipv4Header) + kEthernetOverhead);
+
+  auto status = RecvEthernetFrame(socket, &datagram, datagram.size());
+  if (!status.ok()) {
+    return status;
+  }
+
+  data->resize(data_size);
+  memcpy(data->data(), &datagram.data()[sizeof(Ipv4Header)], data_size);
+
+  return absl::OkStatus();
 }
 
 }  // namespace ip

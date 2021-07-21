@@ -14,13 +14,13 @@ struct IcmpHeader {
 
 // ICMP Control Messages
 
-struct EchoRequest {
+struct EchoBody {
   IcmpHeader hdr;
   uint16_net id;
   uint16_net sequence;
 };
 
-EchoRequest MakeEchoRequest();
+EchoBody MakeEchoRequest();
 
 }  // namespace icmp
 }  // namespace orange_tcp

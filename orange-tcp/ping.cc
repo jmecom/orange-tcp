@@ -17,15 +17,47 @@ ABSL_FLAG(int, num_requests, 1,
 namespace orange_tcp {
 namespace ping {
 
-int Ping(Socket *socket, const IpAddr& ip) {
-  icmp::EchoRequest request = icmp::MakeEchoRequest();
-  auto status = ip::SendDatagram(socket, ip,
+int Ping(Socket *sock, const IpAddr& ip) {
+  icmp::EchoBody request = icmp::MakeEchoRequest();
+  auto status = ip::SendDatagram(sock, ip,
     reinterpret_cast<uint8_t *>(&request), sizeof(request),
     ip::Protocol::icmp);
   if (!status.ok()) {
     printf("[ping] Failed to send");
     return 1;
   }
+
+  // int saddr_size, data_size;
+	// struct sockaddr saddr;
+
+	// unsigned char *buffer = (unsigned char *)malloc(65536); //Its Big!
+
+	// int sock_raw = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	// // int sock_raw = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_IP | ETH_P_ARP));
+
+	// if (sock_raw < 0)
+	// {
+	// 	//Print the error with proper message
+	// 	perror("Socket Error");
+	// 	return 1;
+	// }
+	// while (1)
+	// {
+	// 	saddr_size = sizeof saddr;
+	// 	//Receive a packet
+	// 	data_size = recvfrom(sock_raw, buffer, 65536, 0, &saddr, (socklen_t *)&saddr_size);
+  //   DumpHex(buffer, data_size);
+  // // auto *response = reinterpret_cast<icmp::EchoBody *>(response_buffer.data());
+  // }
+
+  std::vector<uint8_t> response_buffer;
+  status = ip::RecvDatagram(sock, &response_buffer, sizeof(request));
+  if (!status.ok()) {
+    printf("[ping] Failed to recv");
+    return 1;
+  }
+
+  auto *response = reinterpret_cast<icmp::EchoBody *>(response_buffer.data());
 
   return 0;
 }
@@ -43,7 +75,7 @@ int Main() {
   for (int i = 0; i < absl::GetFlag(FLAGS_num_requests); i++) {
     ret = Ping(socket.get(), ip);
     if (ret != 0) return ret;
-    usleep(100);
+    sleep(1);
   }
 
   return 0;

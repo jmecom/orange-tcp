@@ -37,5 +37,8 @@ absl::Status SendDatagram(Socket *socket, IpAddr dst,
   uint8_t *data, size_t size,
   Protocol proto = Protocol::udp);
 
+absl::Status RecvDatagram(Socket *socket,
+  std::vector<uint8_t> *data, size_t data_size);
+
 }  // namespace ip
 }  // namespace orange_tcp
